@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-300 text-white antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-400;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary-600;
+  }
+}
+
+@layer components {
+  .anime-card {
+    @apply relative overflow-hidden rounded-xl bg-dark-100 border border-white/5
+           transition-all duration-300 hover:scale-[1.03] hover:border-primary-500/40
+           hover:shadow-lg hover:shadow-primary-500/10;
+  }
+
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-300 via-purple-400 to-pink-400
+           bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white
+           rounded-xl font-semibold transition-all duration-200
+           hover:shadow-lg hover:shadow-primary-500/25 active:scale-95;
+  }
+}
