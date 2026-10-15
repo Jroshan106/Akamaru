@@ -20,12 +20,11 @@ Akamaru/
 │       ├── data/anime.ts
 │       └── types/index.ts
 ├── client/          # React frontend
-│   └── src/
-│       ├── App.tsx
-│       ├── components/
-│       └── pages/
-└── README.md
-```
+    └── src/
+        ├── App.tsx
+        ├── components/
+        └── pages/
+
 
 ## Getting Started
 
@@ -33,38 +32,6 @@ Akamaru/
 - Node.js >= 18
 - npm >= 9
 
-### Install Dependencies
-
-```bash
-# Backend
-cd server
-npm install
-
-# Frontend
-cd ../client
-npm install
-```
-
-### Run Development Servers
-
-```bash
-# Terminal 1 - Backend (port 4000)
-cd server
-npm run dev
-
-# Terminal 2 - Frontend (port 5173)
-cd client
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Build for Production
-
-```bash
-cd client
-npm run build
-```
 
 ## Features
 
@@ -79,9 +46,6 @@ npm run build
 ## Deployment
 
 This project is configured for **Vercel** deployment. Connect your GitHub repo to Vercel and configure:
-
-- **Frontend**: Set root directory to `client/`, build command `npm run build`, output `dist/`
-- **Backend**: Deploy as a separate Vercel serverless function or another hosting provider
 
 ## License
 
