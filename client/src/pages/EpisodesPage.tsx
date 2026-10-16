@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useCatalog } from '../lib/catalog';
 import { CatalogState, NotFound } from '../components/CatalogUI';
+import CinemaPlayer from '../components/CinemaPlayer';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
@@ -79,7 +80,7 @@ function EpisodeBrowser({ id, title }: { id: string; title: string }) {
             <label className="provider-server">Server and language
               <select value={server} onChange={e => setServer(Number(e.target.value))}>{player.servers.map(s => <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>)}</select>
             </label>
-            <div className="video-player">{player.url ? <iframe key={player.url} src={player.url} title={`${source.title} episode ${episode}`} allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>{player.message}</p>}</div>
+            {player.url ? <CinemaPlayer key={player.url} url={player.url} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
             <p className="muted">Player hosted by Anikoto’s video provider. Availability may vary.</p>
             <a className="text-link" href={player.externalUrl} target="_blank" rel="noreferrer">Player not working? Open episode on Anikoto ↗</a>
           </>}

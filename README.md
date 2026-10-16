@@ -72,6 +72,8 @@ MIT
 
 ## Animiru api
 
+The Akamaru cinema controls cover the provider frame and disable its pointer and tab input. Play/pause, seeking and mute use MegaPlay's existing postMessage bridge, with origin and source validation; fullscreen is handled by Akamaru. This prevents direct player-click ad handlers from receiving user clicks. The provider iframe still runs third-party scripts, so this is not a blanket ad blocker or a guarantee against provider-inserted advertising. Unsupported hosts display a server-selection message instead of an interactive third-party player. Caption and quality menus are not exposed by the supported bridge.
+
 Open an anime's detail page and choose **Watch episodes**. Select the matching title/season, then an episode and Sub/Dub server. The separate `/api/animiru` adapter loads public listings from `anikoto` and embeds the provider-returned player. It does not download or proxy video, generate media access tokens, or bypass player restrictions. Unknown player hosts are rejected; an external episode link remains available. Third-party availability and playback can change, and local verification does not guarantee access from Vercel.
 
 The request flow and HTML selectors were informed by [Yūzōnō's extension] distributed under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE). The web adapter is independently implemented; no Android extractor, decryption or token-generation code is included. No API key is required. Deploy the repository root so the Express API is included.
