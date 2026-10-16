@@ -59,6 +59,16 @@ Remove conflicting dashboard build/output overrides. Push these changes and rede
 
 For local development, run `npm install` then `npm run dev`. For a standalone production server, run `npm run build`, `npm test`, then `npm start` and open http://localhost:4000.
 
+## Jikan catalog
+
+The frontend now loads anime directly from the public Jikan v4 API (`https://api.jikan.moe/v4`). No API key or environment variables are needed. Discovery uses top anime; browsing searches the full catalog with genre/status filters, sorting, and 24-title pages. Details fetch by MyAnimeList ID, including on direct links and reloads. The existing Express demo endpoints remain available for compatibility but no longer drive the frontend catalog.
+
+Requests are queued at least 1.05 seconds apart per browser session, identical requests are deduplicated, successful responses are cached for five minutes, and search is debounced. Network failures and upstream rate limits show a retry message. Watchlist snapshots are stored locally so saved titles remain visible across catalog pages and reloads. Legacy saved IDs are migrated to MyAnimeList IDs.
+
+Jikan provides metadata and available YouTube trailers, not full anime episode streams. Titles without trailers show an explicit unavailable state and link to MyAnimeList. Catalog availability depends on Jikan and the user's network.
+
+Run `npm run build` and `npm test` before deploying. Push the changes and redeploy Vercel to update the live site.
+
 ## License
 
 MIT

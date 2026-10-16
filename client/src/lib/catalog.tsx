@@ -1,12 +1,24 @@
-import {
+﻿import {
   createContext,
   useContext,
   useEffect,
   useState,
   ReactNode,
+  useRef,
 } from "react";
+import { useLocation } from "react-router-dom";
 import type { Anime } from "../types";
+import {
+  jikanRequest,
+  normalizeAnime,
+  searchPath,
+  resolveId,
+  JikanError,
+  type JikanAnime,
+  type JikanResult,
+} from "./jikan";
 
+type Genre = { mal_id: number; name: string };
 type Catalog = {
   anime: Anime[];
   loading: boolean;
@@ -14,58 +26,147 @@ type Catalog = {
   retry: () => void;
   saved: string[];
   toggle: (id: string) => void;
+  genres: Genre[];
+  hasNext: boolean;
+  total: number;
 };
 const Context = createContext<Catalog>(null!);
+function readSaved(): string[] {
+  try {
+    const value: unknown = JSON.parse(
+      localStorage.getItem("akamaru-watchlist") || "[]",
+    );
+    return Array.isArray(value)
+      ? [
+          ...new Set(
+            value
+              .filter((id): id is string => typeof id === "string")
+              .map(resolveId),
+          ),
+        ]
+      : [];
+  } catch {
+    return [];
+  }
+}
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const [anime, setAnime] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [saved, setSaved] = useState<string[]>(() => {
-    try {
-      const value: unknown = JSON.parse(
-        localStorage.getItem("akamaru-watchlist") || "[]",
-      );
-      return Array.isArray(value)
-        ? value.filter((id): id is string => typeof id === "string")
-        : [];
-    } catch {
-      return [];
-    }
-  });
+  const [saved, setSaved] = useState(readSaved);
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [hasNext, setHasNext] = useState(false);
+  const [total, setTotal] = useState(0);
+  const known = useRef(new Map<string, Anime>());
+  const { pathname, search } = useLocation();
+  const watchlistKey = pathname === "/watchlist" ? saved.join(",") : "";
   useEffect(() => {
-    const controller = new AbortController();
+    let cancelled = false;
     setLoading(true);
     setError("");
-    fetch("/api/anime", { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(setAnime)
-      .catch((e) => {
-        if (e.name !== "AbortError")
-          setError(
-            "We couldn’t load the catalog. Check that the API is running and try again.",
-          );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [attempt]);
-  const toggle = (id: string) =>
-    setSaved((previous) => {
-      const next = previous.includes(id)
-        ? previous.filter((item) => item !== id)
-        : [...previous, id];
+    setHasNext(false);
+    async function load() {
       try {
-        localStorage.setItem("akamaru-watchlist", JSON.stringify(next));
-      } catch {
-        /* Still usable for this session. */
+        let items: Anime[] = [];
+        let count = 0;
+        let next = false;
+        const detailId = pathname.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
+        if (detailId) {
+          const id = resolveId(detailId);
+          if (/^\d+$/.test(id)) {
+            const response = await jikanRequest<{ data: JikanAnime }>(
+              `/anime/${id}`,
+            );
+            items = [normalizeAnime(response.data)];
+          }
+        } else if (pathname === "/watchlist") {
+          const ids = watchlistKey.split(",").filter(Boolean);
+          for (const id of ids) {
+            if (cancelled) return;
+            let item = known.current.get(id);
+            if (!item) {
+              try {
+                const stored = JSON.parse(
+                  localStorage.getItem(`akamaru-title-${id}`) || "null",
+                );
+                if (stored?.id === id && Array.isArray(stored.episodes))
+                  item = stored;
+              } catch {
+                /* Storage is optional. */
+              }
+            }
+            if (!item && /^\d+$/.test(id)) {
+              try {
+                item = normalizeAnime(
+                  (await jikanRequest<{ data: JikanAnime }>(`/anime/${id}`))
+                    .data,
+                );
+              } catch (e) {
+                if (!(e instanceof JikanError && e.status === 404)) throw e;
+              }
+            }
+            if (item) items.push(item);
+          }
+          count = items.length;
+        } else {
+          let path = "/top/anime?sfw=true&limit=24";
+          if (pathname === "/browse") {
+            const response = await jikanRequest<{ data: Genre[] }>(
+              "/genres/anime",
+            );
+            if (cancelled) return;
+            setGenres(response.data);
+            path = searchPath(new URLSearchParams(search), response.data);
+          }
+          const response = await jikanRequest<JikanResult>(path);
+          items = [
+            ...new Map(
+              response.data.map((a) => [a.mal_id, normalizeAnime(a)]),
+            ).values(),
+          ];
+          next = response.pagination?.has_next_page || false;
+          count = response.pagination?.items?.total ?? items.length;
+        }
+        if (cancelled) return;
+        items.forEach((a) => known.current.set(a.id, a));
+        setAnime(items);
+        setTotal(count);
+        setHasNext(next);
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof JikanError && e.status === 404) setAnime([]);
+        else
+          setError(
+            e instanceof Error
+              ? e.message
+              : "Unable to load the catalog. Please try again.",
+          );
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      return next;
-    });
+    }
+    const timer = setTimeout(load, pathname === "/browse" ? 400 : 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [pathname, search, attempt, watchlistKey]);
+  const toggle = (id: string) => {
+    const next = saved.includes(id)
+      ? saved.filter((item) => item !== id)
+      : [...saved, id];
+    try {
+      localStorage.setItem("akamaru-watchlist", JSON.stringify(next));
+      const item = known.current.get(id);
+      if (item && next.includes(id))
+        localStorage.setItem(`akamaru-title-${id}`, JSON.stringify(item));
+      else localStorage.removeItem(`akamaru-title-${id}`);
+    } catch {
+      /* Watchlist remains usable for this session. */
+    }
+    setSaved(next);
+  };
   return (
     <Context.Provider
       value={{
@@ -75,6 +176,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         retry: () => setAttempt((x) => x + 1),
         saved,
         toggle,
+        genres,
+        hasNext,
+        total,
       }}
     >
       {children}

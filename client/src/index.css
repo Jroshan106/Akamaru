@@ -8,6 +8,10 @@
   font-synthesis: none;
   color-scheme: dark;
 }
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 * {
   box-sizing: border-box;
 }

@@ -35,19 +35,24 @@ export function AnimeCard({ anime }: { anime: Anime }) {
         </Link>
         <span className="rating">
           <Star size={12} fill="currentColor" />
-          {anime.rating.toFixed(1)}
+          {anime.rating ? anime.rating.toFixed(1) : "N/A"}
         </span>
         <SaveButton id={anime.id} />
-        <span className="poster-tag">{anime.episodes.length} previews</span>
+        <span className="poster-tag">
+          {anime.episodeCount
+            ? `${anime.episodeCount} episodes`
+            : "Episodes TBA"}
+        </span>
       </div>
       <Link className="card-title" to={`/anime/${anime.id}`}>
         {anime.title}
       </Link>
       <p>
-        {anime.year}
+        {anime.year || "TBA"}
         <span>•</span>
         {anime.genres[0]}
-        <span>•</span>TV
+        <span>•</span>
+        {anime.mediaType || "Anime"}
       </p>
     </article>
   );

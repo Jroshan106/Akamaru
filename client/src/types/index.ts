@@ -11,6 +11,8 @@ export interface Anime {
   year: number;
   studio: string;
   episodes: Episode[];
+  episodeCount?: number | null;
+  mediaType?: string;
 }
 
 export interface Episode {

@@ -1,11 +1,12 @@
 import { Link, useParams } from "react-router-dom";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound } from "../components/CatalogUI";
+import { resolveId } from "../lib/jikan";
 export default function WatchPage() {
   const { animeId, episodeId } = useParams();
   const { anime, loading, error } = useCatalog();
   if (loading || error) return <CatalogState />;
-  const item = anime.find((a) => a.id === animeId);
+  const item = anime.find((a) => a.id === resolveId(animeId || ""));
   const episode = item?.episodes.find((e) => e.id === episodeId);
   if (!item || !episode) return <NotFound />;
   const index = item.episodes.indexOf(episode);
@@ -35,14 +36,12 @@ export default function WatchPage() {
           </div>
           <div className="watch-title">
             <div>
-              <span className="eyebrow">
-                VIDEO PREVIEW · EPISODE {episode.number}
-              </span>
+              <span className="eyebrow">ANIME TRAILER</span>
               <h1>{episode.title}</h1>
             </div>
           </div>
           <p className="muted">
-            This demo uses YouTube previews. Availability depends on the
+            Trailers are supplied through Jikan. Availability depends on the
             uploader and your region.
           </p>
           {allowed && (
@@ -77,8 +76,8 @@ export default function WatchPage() {
           </div>
         </section>
         <aside>
-          <h2>Episode guide</h2>
-          <p className="muted">{item.episodes.length} previews</p>
+          <h2>Available trailers</h2>
+          <p className="muted">{item.episodes.length} trailers</p>
           {item.episodes.map((e) => (
             <Link
               aria-current={e.id === episode.id ? "page" : undefined}
@@ -86,13 +85,11 @@ export default function WatchPage() {
               key={e.id}
               to={`/watch/${item.id}/${e.id}`}
             >
-              <span className="episode-number">
-                {String(e.number).padStart(2, "0")}
-              </span>
+              <span className="episode-number">▶</span>
               <div>
                 <strong>{e.title}</strong>
                 <span>
-                  {e.id === episode.id ? "Now selected" : "Watch preview"}
+                  {e.id === episode.id ? "Now selected" : "Watch trailer"}
                 </span>
               </div>
             </Link>

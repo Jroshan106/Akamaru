@@ -6,7 +6,13 @@ export default function Footer() {
         akamaru<span className="brand-dot">.</span>
       </Link>
       <p>A new world. One story away.</p>
-      <span>Demo catalog · Video previews from YouTube</span>
+      <span>
+        Anime data via{" "}
+        <a href="https://jikan.moe/" target="_blank" rel="noreferrer">
+          Jikan
+        </a>{" "}
+        / MyAnimeList · YouTube trailers
+      </span>
     </footer>
   );
 }

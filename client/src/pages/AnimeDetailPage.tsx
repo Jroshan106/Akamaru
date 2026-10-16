@@ -2,11 +2,12 @@ import { Link, useParams } from "react-router-dom";
 import { Play, Star } from "lucide-react";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound, SaveButton } from "../components/CatalogUI";
+import { resolveId } from "../lib/jikan";
 export default function AnimeDetailPage() {
   const { id } = useParams();
   const { anime, loading, error } = useCatalog();
   if (loading || error) return <CatalogState />;
-  const item = anime.find((a) => a.id === id);
+  const item = anime.find((a) => a.id === resolveId(id || ""));
   if (!item) return <NotFound />;
   return (
     <div className="page detail-page">
@@ -21,9 +22,10 @@ export default function AnimeDetailPage() {
           <p className="japanese-title">{item.japaneseTitle}</p>
           <div className="hero-meta">
             <span className="gold">
-              <Star size={16} /> {item.rating.toFixed(1)}
+              <Star size={16} />{" "}
+              {item.rating ? item.rating.toFixed(1) : "Not rated"}
             </span>
-            <span>{item.year}</span>
+            <span>{item.year || "TBA"}</span>
             <span>{item.status}</span>
           </div>
           <p className="synopsis">{item.synopsis}</p>
@@ -40,7 +42,7 @@ export default function AnimeDetailPage() {
                 className="button primary"
                 to={`/watch/${item.id}/${item.episodes[0].id}`}
               >
-                <Play size={18} /> Watch preview
+                <Play size={18} /> Watch trailer
               </Link>
             )}
             <SaveButton id={item.id} />
@@ -48,10 +50,13 @@ export default function AnimeDetailPage() {
         </div>
       </section>
       <section className="catalog-section">
-        <h2>Episode guide</h2>
+        <h2>Trailers & information</h2>
         <p className="muted">
-          Demo entries link to external YouTube previews, not verified full
-          episodes.
+          {item.episodeCount
+            ? `${item.episodeCount} episodes listed.`
+            : "Episode count not announced."}{" "}
+          Jikan provides anime information and trailers, not full-episode
+          streams.
         </p>
         <div className="episode-list">
           {item.episodes.map((e) => (
@@ -61,16 +66,27 @@ export default function AnimeDetailPage() {
               key={e.id}
             >
               <span className="episode-number">
-                {String(e.number).padStart(2, "0")}
+                <Play size={20} />
               </span>
               <div>
                 <strong>{e.title}</strong>
-                <span>Video preview</span>
+                <span>YouTube trailer</span>
               </div>
               <Play size={20} />
             </Link>
           ))}
         </div>
+        {!item.episodes.length && (
+          <p className="muted">No trailer is available for this title yet.</p>
+        )}
+        <a
+          className="text-link"
+          href={`https://myanimelist.net/anime/${item.id}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          View on MyAnimeList ↗
+        </a>
       </section>
     </div>
   );

@@ -7,14 +7,16 @@ export default function BrowsePage({
 }: {
   watchlist?: boolean;
 }) {
-  const { anime, loading, error, saved } = useCatalog();
+  const { anime, loading, error, saved, genres, hasNext, total } = useCatalog();
   const [params, setParams] = useSearchParams();
   const search = params.get("search") || "";
   const genre = params.get("genre") || "";
   const status = params.get("status") || "";
   const sort = params.get("sort") || "rating";
+  const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
+    if (key !== "page") next.delete("page");
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next, { replace: true });
@@ -22,19 +24,22 @@ export default function BrowsePage({
   const results = anime
     .filter(
       (a) =>
-        (!watchlist || saved.includes(a.id)) &&
-        `${a.title} ${a.japaneseTitle} ${a.synopsis}`
-          .toLowerCase()
-          .includes(search.toLowerCase()) &&
-        (!genre || a.genres.includes(genre)) &&
-        (!status || a.status === status),
+        !watchlist ||
+        ((!watchlist || saved.includes(a.id)) &&
+          `${a.title} ${a.japaneseTitle} ${a.synopsis}`
+            .toLowerCase()
+            .includes(search.toLowerCase()) &&
+          (!genre || a.genres.includes(genre)) &&
+          (!status || a.status === status)),
     )
     .sort((a, b) =>
-      sort === "title"
-        ? a.title.localeCompare(b.title)
-        : sort === "year"
-          ? b.year - a.year
-          : b.rating - a.rating,
+      !watchlist
+        ? 0
+        : sort === "title"
+          ? a.title.localeCompare(b.title)
+          : sort === "year"
+            ? b.year - a.year
+            : b.rating - a.rating,
     );
   return (
     <div className="page browse-page">
@@ -67,7 +72,10 @@ export default function BrowsePage({
             onChange={(e) => update("genre", e.target.value)}
           >
             <option value="">All genres</option>
-            {[...new Set(anime.flatMap((a) => a.genres))].sort().map((g) => (
+            {(watchlist
+              ? [...new Set(anime.flatMap((a) => a.genres))].sort()
+              : genres.map((g) => g.name)
+            ).map((g) => (
               <option key={g}>{g}</option>
             ))}
           </select>
@@ -98,7 +106,8 @@ export default function BrowsePage({
       ) : (
         <>
           <div className="results-count">
-            {results.length} titles to explore
+            {watchlist ? results.length : total.toLocaleString()} titles{" "}
+            {watchlist ? "in your list" : `· Page ${page}`}
           </div>
           {results.length ? (
             <div className="anime-grid">
@@ -125,6 +134,24 @@ export default function BrowsePage({
                 Clear filters
               </button>
             </div>
+          )}
+          {!watchlist && (page > 1 || hasNext) && (
+            <nav className="episode-controls" aria-label="Catalog pages">
+              <button
+                className="button secondary"
+                disabled={page <= 1}
+                onClick={() => update("page", String(page - 1))}
+              >
+                ← Previous page
+              </button>
+              <button
+                className="button primary"
+                disabled={!hasNext}
+                onClick={() => update("page", String(page + 1))}
+              >
+                Next page →
+              </button>
+            </nav>
           )}
         </>
       )}

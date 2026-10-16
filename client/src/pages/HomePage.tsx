@@ -26,10 +26,10 @@ export default function HomePage() {
           <div className="hero-meta">
             <span className="gold">
               <Star size={15} fill="currentColor" />{" "}
-              {featured.rating.toFixed(1)}
+              {featured.rating ? featured.rating.toFixed(1) : "Not rated"}
             </span>
-            <span>{featured.year}</span>
-            <span>TV Series</span>
+            <span>{featured.year || "TBA"}</span>
+            <span>{featured.mediaType || "Anime"}</span>
             <span className="badge">{featured.status}</span>
           </div>
           <p>{featured.synopsis}</p>
@@ -43,10 +43,14 @@ export default function HomePage() {
           <div className="hero-actions">
             <Link
               className="button primary"
-              to={`/watch/${featured.id}/${featured.episodes[0]?.id}`}
+              to={
+                featured.episodes[0]
+                  ? `/watch/${featured.id}/${featured.episodes[0].id}`
+                  : `/anime/${featured.id}`
+              }
             >
               <Play size={18} fill="currentColor" />
-              Watch preview
+              {featured.episodes[0] ? "Watch trailer" : "Explore anime"}
             </Link>
             <Link className="button secondary" to={`/anime/${featured.id}`}>
               View details <ArrowRight size={17} />
@@ -56,10 +60,10 @@ export default function HomePage() {
         </div>
         <div className="hero-bottom">
           <span>
-            <b>0{index + 1}</b> / 0{anime.length}
+            <b>0{index + 1}</b> / 0{Math.min(6, anime.length)}
           </span>
           <div className="hero-dots">
-            {anime.map((a, i) => (
+            {anime.slice(0, 6).map((a, i) => (
               <button
                 key={a.id}
                 aria-label={`Feature ${a.title}`}
