@@ -26,10 +26,12 @@ Akamaru/
         └── pages/
 
 
+```
+
 ## Getting Started
 
 ### Prerequisites
-- Node.js >= 18
+- Node.js >= 20
 - npm >= 9
 
 
@@ -45,7 +47,17 @@ Akamaru/
 
 ## Deployment
 
-This project is configured for **Vercel** deployment. Connect your GitHub repo to Vercel and configure:
+Deploy with **Root Directory set to the repository root** (leave it blank, not `client`) and the **Other** framework preset. The root `vercel.json` sets:
+
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output directory: `client/dist`
+- `/api/*`: shared Express function in `api/index.js`
+- Page URLs: React app with browser routing
+
+Remove conflicting dashboard build/output overrides. Push these changes and redeploy the latest commit. Verify `/api/health` and `/api/anime` return JSON on the deployed domain. A frontend-only deployment rooted at `client` cannot include the API function.
+
+For local development, run `npm install` then `npm run dev`. For a standalone production server, run `npm run build`, `npm test`, then `npm start` and open http://localhost:4000.
 
 ## License
 
