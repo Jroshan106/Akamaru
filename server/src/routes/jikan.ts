@@ -15,7 +15,10 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
     }
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(req.query)) {
-      if (!allowedQuery.has(key) || typeof value !== 'string' || value.length > 200) {
+      // Vercel rewrites can add route captures (e.g. `path`) to req.query.
+      // Ignore non-catalog parameters; never forward them to the fixed host.
+      if (!allowedQuery.has(key)) continue;
+      if (typeof value !== 'string' || value.length > 200) {
         res.status(400).json({ error: 'Invalid catalog query' }); return;
       }
       query.set(key, value);

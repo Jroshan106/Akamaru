@@ -6,8 +6,12 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { createJikanRouter } = require('../server/dist/routes/jikan.js');
 
-async function withProxy(fetcher, run, timeout = 1000) {
+async function withProxy(fetcher, run, timeout = 1000, injectRoutingParameters = false) {
   const app = express();
+  if (injectRoutingParameters) app.use((req, _res, next) => {
+    req.query.path = req.path.replace(/^\/api\//, '');
+    next();
+  });
   app.use('/api/jikan', createJikanRouter(fetcher, 0, timeout));
   const server = createServer(app);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -37,14 +41,34 @@ test('proxy forwards full query to fixed host and caches identical requests', as
     assert.equal(calls, 1);
   });
 });
-test('proxy rejects unsupported endpoints, arbitrary targets, and invalid pages', async () => {
+test('proxy rejects unsupported endpoints and malformed supported filters', async () => {
   await withProxy(async () => { throw new Error('Must not fetch'); }, async base => {
-    for (const path of ['/users', '/anime?url=https://example.com', '/anime?page=-1', '/anime?limit=100', '/anime?q=a&q=b']) {
+    for (const path of ['/users', '/anime?page=-1', '/anime?limit=100', '/anime?q=a&q=b']) {
       const response = await fetch(base + path);
       assert.ok([400, 404].includes(response.status));
       assert.equal(response.headers.get('cache-control'), 'no-store');
     }
   });
+});
+
+test('Vercel rewrite captures do not reject valid requests or reach Jikan', async () => {
+  const targets = [];
+  await withProxy(async url => {
+    const target = new URL(url);
+    targets.push(target);
+    assert.equal(target.origin, 'https://api.jikan.moe');
+    assert.equal(target.searchParams.has('path'), false);
+    assert.equal(target.searchParams.has('url'), false);
+    return Response.json({ data: [] });
+  }, async base => {
+    for (const path of ['/genres/anime', '/top/anime?limit=1', '/anime?q=naruto&page=2&url=https://example.com', '/anime/1']) {
+      const response = await fetch(base + path);
+      assert.equal(response.status, 200, path);
+      assert.deepEqual(await response.json(), { data: [] });
+    }
+    assert.equal(targets[2].searchParams.get('q'), 'naruto');
+    assert.equal(targets[2].searchParams.get('page'), '2');
+  }, 1000, true);
 });
 test('upstream rate limits remain retryable and are never cached', async () => {
   let calls = 0;
