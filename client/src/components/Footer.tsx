@@ -3,7 +3,7 @@ export default function Footer() {
   return (
     <footer>
       <Link className="brand" to="/">
-        akamaru<span className="brand-dot">.</span>
+        <img className="brand-logo" src="/akamaru-logo.png" alt="Akamaru" width="648" height="216" loading="lazy" />
       </Link>
       <p>A new world. One story away.</p>
       <span>

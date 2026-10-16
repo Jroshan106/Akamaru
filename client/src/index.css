@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 :root {
@@ -44,7 +44,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #c1a7ff;
+  outline: 2px solid #ff8faa;
   outline-offset: 5px;
 }
 button {
@@ -100,11 +100,11 @@ main {
 }
 .brand-dot,
 .accent {
-  color: #b99bec;
+  color: #b30f3c;
 }
 .brand-mark {
-  background: #b99bec;
-  color: #17121e;
+  background: #b30f3c;
+  color: #ffffff;
   border-radius: 11px;
   width: 34px;
   height: 34px;
@@ -129,7 +129,7 @@ main {
   white-space: nowrap;
 }
 .navbar nav a.active {
-  color: #e1d2fa;
+  color: #ffd1dd;
 }
 .navbar nav a.active:after {
   content: "";
@@ -138,7 +138,7 @@ main {
   height: 2px;
   left: 0;
   right: 0;
-  background: #b99bec;
+  background: #b30f3c;
 }
 .nav-search {
   margin-left: auto;
@@ -196,7 +196,7 @@ main {
   font-size: 10px;
   letter-spacing: 2.2px;
   font-weight: 700;
-  color: #bba0e7;
+  color: #f38aa6;
   margin-bottom: 20px;
 }
 .hero h1 {
@@ -267,11 +267,11 @@ main {
   transition: background 0.2s;
 }
 .primary {
-  background: #b99bec;
-  color: #21172e;
+  background: #b30f3c;
+  color: #ffffff;
 }
 .primary:hover {
-  background: #cdb2ff;
+  background: #d51a50;
 }
 .secondary {
   background: #ffffff09;
@@ -291,8 +291,8 @@ main {
   border-radius: 7px;
 }
 .save-button.saved {
-  color: #c7a5ff;
-  background: #392d48;
+  color: #ff9bb6;
+  background: #391923;
 }
 .hero-bottom {
   position: absolute;
@@ -322,7 +322,7 @@ main {
   background: #64616a;
 }
 .hero-dots button.active {
-  background: #b99bec;
+  background: #b30f3c;
   width: 29px;
 }
 .hero-caption {
@@ -490,12 +490,12 @@ main {
   background: #292332;
 }
 .mood-links span {
-  color: #8b749e;
+  color: #bc7085;
   font-size: 10px;
 }
 .mood-links svg {
   margin-left: auto;
-  color: #b79bcc;
+  color: #ed8da6;
 }
 footer {
   padding: 28px 5%;
@@ -598,7 +598,7 @@ footer > span {
   width: 27px;
   height: 27px;
   border: 2px solid #39303f;
-  border-top-color: #b99bec;
+  border-top-color: #b30f3c;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -659,7 +659,7 @@ footer > span {
   background: #282131;
 }
 .episode-number {
-  color: #b99bec;
+  color: #b30f3c;
   font-size: 19px;
   font-weight: 700;
 }
@@ -676,7 +676,7 @@ footer > span {
 }
 .episode-row > svg {
   margin-left: auto;
-  color: #b99bec;
+  color: #b30f3c;
 }
 .watch-layout {
   display: grid;
@@ -714,8 +714,8 @@ footer > span {
   padding: 15px;
 }
 .episode-row.selected {
-  border-color: #b99bec80;
-  background: #302539;
+  border-color: #b30f3c80;
+  background: #301820;
 }
 .episode-controls {
   display: flex;
@@ -724,7 +724,7 @@ footer > span {
 }
 .text-link {
   font-size: 12px;
-  color: #c9a8f2;
+  color: #ff9bb6;
 }
 @media (min-width: 1600px) {
   .hero-content {

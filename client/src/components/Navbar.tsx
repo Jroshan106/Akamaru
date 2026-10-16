@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Search, Bookmark, Play, House, Compass } from "lucide-react";
+import { Search, Bookmark, House, Compass } from "lucide-react";
 import { FormEvent, useState } from "react";
 export default function Navbar() {
   const [query, setQuery] = useState("");
@@ -11,10 +11,7 @@ export default function Navbar() {
   return (
     <><header className="navbar">
       <Link to="/" className="brand">
-        <span className="brand-mark">
-          <Play size={19} fill="currentColor" />
-        </span>
-        akamaru<span className="brand-dot">.</span>
+        <img className="brand-logo" src="/akamaru-logo.png" alt="Akamaru" width="648" height="216" />
       </Link>
       <nav aria-label="Main navigation">
         <NavLink to="/" end>
