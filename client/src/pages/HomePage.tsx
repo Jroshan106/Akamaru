@@ -46,14 +46,10 @@ export default function HomePage() {
           <div className="hero-actions">
             <Link
               className="button primary"
-              to={
-                featured.episodes[0]
-                  ? `/watch/${featured.id}/${featured.episodes[0].id}`
-                  : `/anime/${featured.id}`
-              }
+              to={`/anime/${featured.id}/episodes`}
             >
               <Play size={18} fill="currentColor" />
-              {featured.episodes[0] ? "Watch trailer" : "Explore anime"}
+              Watch episodes
             </Link>
             <Link className="button secondary" to={`/anime/${featured.id}`}>
               View details <ArrowRight size={17} />

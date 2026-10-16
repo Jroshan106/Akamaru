@@ -38,11 +38,8 @@ Akamaru/
 ## Features
 
 - 🎬 Browse anime with cover art and details
-- 🔍 Search anime by title
-- 🏷️ Filter by genre and status
 - ▶️ Watch embedded video streams
 - 📱 Fully responsive design
-- 🎨 Dark theme with purple/indigo accents
 - ⚡ Fast Vite-powered dev server
 
 ## Deployment
@@ -72,5 +69,11 @@ Run `npm run build` and `npm test` before deploying. Push the changes and redepl
 ## License
 
 MIT
+
+## Animiru api
+
+Open an anime's detail page and choose **Watch episodes**. Select the matching title/season, then an episode and Sub/Dub server. The separate `/api/animiru` adapter loads public listings from `anikoto` and embeds the provider-returned player. It does not download or proxy video, generate media access tokens, or bypass player restrictions. Unknown player hosts are rejected; an external episode link remains available. Third-party availability and playback can change, and local verification does not guarantee access from Vercel.
+
+The request flow and HTML selectors were informed by [Yūzōnō's extension] distributed under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE). The web adapter is independently implemented; no Android extractor, decryption or token-generation code is included. No API key is required. Deploy the repository root so the Express API is included.
 
 The proxy allows only anime search, top anime, genres, and numeric anime details. It caches successful responses for five minutes, deduplicates concurrent requests, spaces upstream calls, and returns non-cacheable JSON errors on rate limits/timeouts. This requires deploying the root Vercel API function alongside the frontend. After deployment, check /api/jikan/top/anime?limit=1 returns JSON. A 502 means Vercel could not reach Tenrai; a 404 means the function/routing was not deployed. This change cannot resolve an outage at the upstream provider itself.

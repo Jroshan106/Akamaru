@@ -2,6 +2,7 @@
 import cors from "cors";
 import animeRoutes from "./routes/anime";
 import jikanRoutes from './routes/jikan';
+import anikotoRoutes from './routes/anikoto';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 // Routes
 app.use("/api/anime", animeRoutes);
 app.use('/api/jikan', jikanRoutes);
+app.use('/api/anikoto', anikotoRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

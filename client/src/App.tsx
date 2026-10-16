@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
 import WatchPage from "./pages/WatchPage";
 import AnimeDetailPage from "./pages/AnimeDetailPage";
+import EpisodesPage from "./pages/EpisodesPage";
 import { CatalogProvider } from "./lib/catalog";
 import { NotFound } from "./components/CatalogUI";
 import { useEffect } from "react";
@@ -25,6 +26,7 @@ function App() {
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/watchlist" element={<BrowsePage watchlist />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />
+            <Route path="/anime/:id/episodes" element={<EpisodesPage />} />
             <Route path="/watch/:animeId/:episodeId" element={<WatchPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

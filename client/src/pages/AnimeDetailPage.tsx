@@ -37,9 +37,10 @@ export default function AnimeDetailPage() {
             ))}
           </div>
           <div className="hero-actions">
+            <Link className="button primary" to={`/anime/${item.id}/episodes`}><Play size={18} /> Watch episodes</Link>
             {item.episodes[0] && (
               <Link
-                className="button primary"
+                className="button secondary"
                 to={`/watch/${item.id}/${item.episodes[0].id}`}
               >
                 <Play size={18} /> Watch trailer

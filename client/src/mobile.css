@@ -1,5 +1,15 @@
 /* Phone layout. Keep desktop styling independent. */
 .mobile-navigation, .mobile-search { display: none; }
+.provider-page h1 { font-size: clamp(26px, 5vw, 40px); margin: 12px 0 18px; }
+.provider-page h2 { margin-bottom: 16px; overflow-wrap: anywhere; }
+.provider-search { display: flex; gap: 12px; margin: 22px 0; }
+.provider-search input, .provider-server select { background: #21191d; color: white; padding: 12px; border: 1px solid #ffffff25; border-radius: 10px; min-width: 0; font-size: 16px; }
+.provider-search input { flex: 1; }
+.provider-server { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.provider-episodes { max-height: 65vh; overflow-y: auto; }
+.provider-page button.episode-row { width: 100%; text-align: left; color: inherit; cursor: pointer; }
+.provider-page button:disabled { opacity: .4; cursor: not-allowed; }
+.detail-layout .hero-actions { flex-wrap: wrap; }
 .brand { flex-shrink: 0; }
 .brand-logo { display: block; width: 210px; height: 70px; object-fit: contain; }
 footer .brand-logo { width: 156px; height: 52px; }
