@@ -6,7 +6,7 @@ export interface Anime {
   coverImage: string;
   bannerImage: string;
   genres: string[];
-  status: 'Airing' | 'Completed' | 'Upcoming';
+  status: "Airing" | "Completed" | "Upcoming";
   rating: number;
   year: number;
   studio: string;
