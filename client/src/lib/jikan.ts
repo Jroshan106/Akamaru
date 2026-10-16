@@ -107,9 +107,9 @@ export function jikanRequest<T>(path: string): Promise<T> {
       if (!response.ok)
         throw new JikanError(
           response.status === 429
-            ? "Jikan is busy. Please wait a minute, then try again."
+            ? "The anime provider is busy. Please wait a minute, then try again."
             : response.status === 502
-              ? "Jikan is temporarily unreachable from the server. Please try again shortly."
+              ? "The anime provider is temporarily unreachable from the server. Please try again shortly."
               : "The anime catalog is temporarily unavailable. Please try again.",
           response.status,
         );

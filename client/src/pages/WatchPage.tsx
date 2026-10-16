@@ -41,7 +41,7 @@ export default function WatchPage() {
             </div>
           </div>
           <p className="muted">
-            Trailers are supplied through Jikan. Availability depends on the
+            Trailers are supplied through Tenrai. Availability depends on the
             uploader and your region.
           </p>
           {allowed && (

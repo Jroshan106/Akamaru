@@ -8,8 +8,8 @@ export default function Footer() {
       <p>A new world. One story away.</p>
       <span>
         Anime data via{" "}
-        <a href="https://jikan.moe/" target="_blank" rel="noreferrer">
-          Jikan
+        <a href="https://tenrai.org/" target="_blank" rel="noreferrer">
+          Tenrai
         </a>{" "}
         / MyAnimeList · YouTube trailers
       </span>

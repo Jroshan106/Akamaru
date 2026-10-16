@@ -50,10 +50,10 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
-          const response = await fetcher(`https://api.jikan.moe/v4${key}`, { signal: controller.signal, headers: { Accept: 'application/json' } });
+          const response = await fetcher(`https://api.tenrai.org/v1${key}`, { signal: controller.signal, headers: { Accept: 'application/json' } });
           if (!response.ok) {
             const status = [400, 404, 429].includes(response.status) ? response.status : 502;
-            return { status, body: { error: status === 429 ? 'Jikan is busy. Please wait a minute, then try again.' : 'Jikan could not load this catalog request. Please try again.' } };
+            return { status, body: { error: status === 429 ? 'The anime provider is busy. Please wait a minute, then try again.' : 'The anime provider could not load this catalog request. Please try again.' } };
           }
           const body = await response.json();
           if (!body || typeof body !== 'object' || !('data' in body)) throw new Error('Invalid upstream response');
@@ -61,7 +61,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
           cache.set(key, { body, expires: Date.now() + 300000 });
           return { status: 200, body };
         } catch {
-          return { status: 502, body: { error: 'The server cannot reach Jikan right now. Please try again shortly.' } };
+          return { status: 502, body: { error: 'The server cannot reach the anime provider right now. Please try again shortly.' } };
         } finally { clearTimeout(timer); }
       })();
       pending.set(key, request);

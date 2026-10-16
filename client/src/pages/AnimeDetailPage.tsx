@@ -55,7 +55,7 @@ export default function AnimeDetailPage() {
           {item.episodeCount
             ? `${item.episodeCount} episodes listed.`
             : "Episode count not announced."}{" "}
-          Jikan provides anime information and trailers, not full-episode
+          Tenrai provides anime information and trailers, not full-episode
           streams.
         </p>
         <div className="episode-list">

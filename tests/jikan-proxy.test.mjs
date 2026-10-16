@@ -24,8 +24,8 @@ test('proxy forwards full query to fixed host and caches identical requests', as
   await withProxy(async url => {
     calls++;
     const target = new URL(url);
-    assert.equal(target.origin, 'https://api.jikan.moe');
-    assert.equal(target.pathname, '/v4/anime');
+    assert.equal(target.origin, 'https://api.tenrai.org');
+    assert.equal(target.pathname, '/v1/anime');
     assert.equal(target.searchParams.get('q'), 'one piece');
     assert.equal(target.searchParams.get('page'), '2');
     assert.equal(target.searchParams.get('sfw'), 'true');
@@ -56,7 +56,7 @@ test('Vercel rewrite captures do not reject valid requests or reach Jikan', asyn
   await withProxy(async url => {
     const target = new URL(url);
     targets.push(target);
-    assert.equal(target.origin, 'https://api.jikan.moe');
+    assert.equal(target.origin, 'https://api.tenrai.org');
     assert.equal(target.searchParams.has('path'), false);
     assert.equal(target.searchParams.has('url'), false);
     return Response.json({ data: [] });
@@ -84,6 +84,6 @@ test('upstream timeout returns a useful 502 instead of hanging', async () => {
   await withProxy((_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('timeout')))), async base => {
     const response = await fetch(`${base}/anime/1`);
     assert.equal(response.status, 502);
-    assert.match((await response.json()).error, /server cannot reach Jikan/);
+    assert.match((await response.json()).error, /server cannot reach the anime provider/);
   }, 20);
 });

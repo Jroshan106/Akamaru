@@ -896,3 +896,8 @@ footer > span {
     scroll-behavior: auto !important;
   }
 }
+
+/* Keep long catalog titles clear of the spotlight controls. */
+.hero { height: auto; min-height: 550px; padding-bottom: 90px; }
+@media (min-width: 1600px) { .hero { min-height: 610px; } }
+@media (max-width: 720px) { .hero { min-height: 565px; } }
