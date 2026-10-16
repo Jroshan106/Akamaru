@@ -25,6 +25,9 @@ export function AnimeCard({ anime }: { anime: Anime }) {
             src={anime.coverImage}
             alt={anime.title}
             loading="lazy"
+            decoding="async"
+            width={300}
+            height={425}
             onError={(e) => {
               e.currentTarget.src = "/placeholder.svg";
             }}

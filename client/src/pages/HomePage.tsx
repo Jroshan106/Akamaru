@@ -13,9 +13,12 @@ export default function HomePage() {
   return (
     <>
       <section className="hero">
-        <div
+        <img
           className="hero-art"
-          style={{ backgroundImage: `url(${featured.coverImage})` }}
+          src={featured.coverImage}
+          alt=""
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="hero-shade" />
         <div className="hero-content">
@@ -92,7 +95,7 @@ export default function HomePage() {
           <div className="anime-grid">
             {[...anime]
               .sort((a, b) => b.rating - a.rating)
-              .map((a) => (
+              .slice(0, 12).map((a) => (
                 <AnimeCard anime={a} key={a.id} />
               ))}
           </div>
