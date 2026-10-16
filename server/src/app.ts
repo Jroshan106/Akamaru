@@ -1,6 +1,7 @@
 ﻿import express from "express";
 import cors from "cors";
 import animeRoutes from "./routes/anime";
+import jikanRoutes from './routes/jikan';
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/anime", animeRoutes);
+app.use('/api/jikan', jikanRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

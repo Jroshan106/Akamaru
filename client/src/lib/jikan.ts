@@ -99,16 +99,18 @@ export function jikanRequest<T>(path: string): Promise<T> {
     await pause(Math.max(0, 1050 - (Date.now() - lastStart)));
     lastStart = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetch(`https://api.jikan.moe/v4${path}`, {
+      const response = await fetch(`/api/jikan${path}`, {
         signal: controller.signal,
       });
       if (!response.ok)
         throw new JikanError(
           response.status === 429
             ? "Jikan is busy. Please wait a minute, then try again."
-            : "The anime catalog is temporarily unavailable. Please try again.",
+            : response.status === 502
+              ? "Jikan is temporarily unreachable from the server. Please try again shortly."
+              : "The anime catalog is temporarily unavailable. Please try again.",
           response.status,
         );
       const value = await response.json();
@@ -122,7 +124,7 @@ export function jikanRequest<T>(path: string): Promise<T> {
     } catch (error) {
       if (error instanceof JikanError) throw error;
       throw new JikanError(
-        "Could not reach Jikan. Check your connection and try again.",
+        "Could not reach the catalog server. Please try again.",
       );
     } finally {
       clearTimeout(timeout);

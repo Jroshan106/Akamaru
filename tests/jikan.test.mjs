@@ -75,7 +75,8 @@ test("search, genre, status, sort, and page become upstream query parameters", (
 test("requests deduplicate, cache successes, and allow retry after rate limits", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (url) => {
+    assert.equal(url, '/api/jikan/test-cache');
     calls++;
     return Response.json({ data: [] });
   };

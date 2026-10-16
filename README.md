@@ -1,4 +1,4 @@
-﻿# Akamaru - Anime Streaming Website
+# Akamaru - Anime Streaming Website
 
 A modern anime streaming platform built with **TypeScript**, **React**, **Node.js (Express)**, and **Tailwind CSS**.
 
@@ -61,7 +61,7 @@ For local development, run `npm install` then `npm run dev`. For a standalone pr
 
 ## Jikan catalog
 
-The frontend now loads anime directly from the public Jikan v4 API (`https://api.jikan.moe/v4`). No API key or environment variables are needed. Discovery uses top anime; browsing searches the full catalog with genre/status filters, sorting, and 24-title pages. Details fetch by MyAnimeList ID, including on direct links and reloads. The existing Express demo endpoints remain available for compatibility but no longer drive the frontend catalog.
+The frontend loads anime through the same-origin `/api/jikan/*` proxy. The server calls the public Jikan v4 API (`https://api.jikan.moe/v4`), so visitors do not need a direct browser connection to Jikan. No API key or environment variables are needed. Discovery uses top anime; browsing searches the full catalog with genre/status filters, sorting, and 24-title pages. Details fetch by MyAnimeList ID, including on direct links and reloads. The existing Express demo endpoints remain available for compatibility but no longer drive the frontend catalog.
 
 Requests are queued at least 1.05 seconds apart per browser session, identical requests are deduplicated, successful responses are cached for five minutes, and search is debounced. Network failures and upstream rate limits show a retry message. Watchlist snapshots are stored locally so saved titles remain visible across catalog pages and reloads. Legacy saved IDs are migrated to MyAnimeList IDs.
 
@@ -72,3 +72,5 @@ Run `npm run build` and `npm test` before deploying. Push the changes and redepl
 ## License
 
 MIT
+
+The proxy allows only anime search, top anime, genres, and numeric anime details. It caches successful responses for five minutes, deduplicates concurrent requests, spaces upstream calls, and returns non-cacheable JSON errors on rate limits/timeouts. This requires deploying the root Vercel API function alongside the frontend. After deployment, check /api/jikan/top/anime?limit=1 returns JSON. A 502 means Vercel could not reach Jikan; a 404 means the function/routing was not deployed. This change cannot resolve an outage at Jikan itself.
