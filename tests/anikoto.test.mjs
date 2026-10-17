@@ -45,3 +45,24 @@ test('Player resolution uses only provider-returned IDs, rejects unsafe embed UR
     assert.equal(calls.length, count);
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 });
+
+test('Player response preserves valid intro timing and rejects malformed intervals', async () => {
+  for (const [intro, expected] of [[[0, 89], [0, 89]], [[20, 10], null], [[-1, 90], null], [['0', 90], null], [undefined, null]]) {
+    const mock = async url => {
+      if (url.endsWith('/watch/example')) return new Response('<div class="watch-wrap" data-id="123"></div>');
+      let result;
+      if (url.includes('/ajax/episode/list/')) result = '<div class="episodes"><ul><li><a data-num="1" data-ids="abc"></a></li></ul></div>';
+      else if (url.includes('/ajax/server/list?')) result = '<div data-type="sub"><li data-link-id="player">HD-1</li></div>';
+      else result = {url: 'https://megaplay.buzz/stream/1', skip_data: {intro}};
+      return new Response(JSON.stringify({status: 200, result}));
+    };
+    const app = express(); app.use('/api', createAnikotoRouter(mock));
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise(resolve => server.once('listening', resolve));
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.address().port}/api/example/episodes/1/players`);
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).intro, expected);
+    } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+  }
+});
