@@ -6,7 +6,7 @@ import CinemaPlayer from '../components/CinemaPlayer';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
-type Player = { url: string | null; externalUrl: string; message: string; servers: { id: number; name: string; language: string }[] };
+type Player = { url: string | null; intro?: [number, number] | null; externalUrl: string; message: string; servers: { id: number; name: string; language: string }[] };
 async function get<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(`/api/anikoto${path}`, { signal });
   const data = await response.json();
@@ -80,7 +80,7 @@ function EpisodeBrowser({ id, title }: { id: string; title: string }) {
             <label className="provider-server">Server and language
               <select value={server} onChange={e => setServer(Number(e.target.value))}>{player.servers.map(s => <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>)}</select>
             </label>
-            {player.url ? <CinemaPlayer key={player.url} url={player.url} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
+            {player.url ? <CinemaPlayer key={player.url} url={player.url} intro={player.intro} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
             <p className="muted">Player hosted by Anikoto’s video provider. Availability may vary.</p>
             <a className="text-link" href={player.externalUrl} target="_blank" rel="noreferrer">Player not working? Open episode on Anikoto ↗</a>
           </>}

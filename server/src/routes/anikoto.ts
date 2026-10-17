@@ -108,7 +108,9 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
       const data = result(await request(`/ajax/server?get=${encodeURIComponent(selected.id)}`, referer));
       const url = typeof data.url === 'string' && allowedPlayer(data.url) ? data.url : null;
       res.setHeader('Cache-Control', 'no-store');
-      res.json({ url, externalUrl: referer, servers: candidates.map((s, i) => ({ id: i, name: s.name, language: s.language })),
+      const rawIntro = data.skip_data?.intro;
+      const intro = Array.isArray(rawIntro) && rawIntro.length === 2 && rawIntro.every(Number.isFinite) && rawIntro[0] >= 0 && rawIntro[1] > rawIntro[0] ? rawIntro : null;
+      res.json({ url, intro, externalUrl: referer, servers: candidates.map((s, i) => ({ id: i, name: s.name, language: s.language })),
         message: url ? '' : 'This host cannot be embedded here. Choose another server or open the episode on Anikoto.' });
     } catch (e) { res.status(502).json({ error: e instanceof Error ? e.message : 'Player unavailable.' }); }
   });
