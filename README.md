@@ -80,10 +80,6 @@ The request flow and HTML selectors were informed by [Yūzōnō's extension] dis
 
 The proxy allows only anime search, top anime, genres, and numeric anime details. It caches successful responses for five minutes, deduplicates concurrent requests, spaces upstream calls, and returns non-cacheable JSON errors on rate limits/timeouts. This requires deploying the root Vercel API function alongside the frontend. After deployment, check /api/jikan/top/anime?limit=1 returns JSON. A 502 means Vercel could not reach Tenrai; a 404 means the function/routing was not deployed. This change cannot resolve an outage at the upstream provider itself.
 
-## Player modes
+## Player
 
-The episode page offers **Akamaru controls** and **Original provider player**. The original mode gives the approved provider iframe pointer and keyboard input, fullscreen and picture-in-picture. Its own subtitle, quality and speed menus depend on the selected server. Ads/popups may return in this mode; the UI discloses this tradeoff. Switching back restores the Akamaru overlay. Provider mode does not implement Akamaru auto-next or intro preferences.
-
-A separate experimental direct player uses HTML video and lazy-loaded hls.js, with real subtitle tracks, manifest-derived quality selection, 0.5–3x speed and native ended-event auto-next. In development, select the experimental player and paste the matching Anikage title/season link. The server requests only the fixed Anikage Koto API and accepts media URLs only from its fixed media service. It does not proxy video or copy player code.
-
-Live testing found that Anikage's undocumented media service permits localhost:5173 but returns `forbidden origin` for Akamaru's Vercel domain. Therefore this option is hidden and its API disabled in production by default. Do not enable `VITE_ENABLE_ANIKAGE_DIRECT=true` (build time) and `ENABLE_ANIKAGE_DIRECT=true` (server) until the source service authorizes the deployment domain. Its API and media host can change independently. The original provider mode is the production-ready option added here.
+The episode page uses **Akamaru Cinema Player** with custom controls, auto-skip intro, auto-next episode, volume, fullscreen, and integrated server & language selection (Sub/Dub).
