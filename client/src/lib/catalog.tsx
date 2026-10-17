@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useContext,
   useEffect,
@@ -79,6 +79,20 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
               `/anime/${id}`,
             );
             items = [normalizeAnime(response.data)];
+          } else {
+            const cleanQuery = decodeURIComponent(id).replace(/[-_]+/g, ' ').trim();
+            if (cleanQuery) {
+              try {
+                const response = await jikanRequest<JikanResult>(
+                  `/anime?q=${encodeURIComponent(cleanQuery)}&limit=1`,
+                );
+                if (response.data && response.data.length > 0) {
+                  items = [normalizeAnime(response.data[0])];
+                }
+              } catch {
+                /* Ignore and fallback gracefully */
+              }
+            }
           }
         } else if (pathname === "/watchlist") {
           const ids = watchlistKey.split(",").filter(Boolean);
@@ -129,7 +143,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           count = response.pagination?.items?.total ?? items.length;
         }
         if (cancelled) return;
-        items.forEach((a) => known.current.set(a.id, a));
+        items.forEach((a) => {
+          known.current.set(a.id, a);
+          if (detailId) known.current.set(detailId.toLowerCase(), a);
+        });
         setAnime(items);
         setTotal(count);
         setHasNext(next);

@@ -27,6 +27,7 @@ function App() {
             <Route path="/watchlist" element={<BrowsePage watchlist />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />
             <Route path="/anime/:id/episodes" element={<EpisodesPage />} />
+            <Route path="/anime/:id/episodes/:episodeNumber" element={<EpisodesPage />} />
             <Route path="/watch/:animeId/:episodeId" element={<WatchPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

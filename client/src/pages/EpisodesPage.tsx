@@ -1,99 +1,323 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../lib/catalog';
+import { resolveId } from '../lib/jikan';
 import { CatalogState, NotFound } from '../components/CatalogUI';
 import CinemaPlayer from '../components/CinemaPlayer';
+import type { Anime } from '../types';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
 type Player = { url: string | null; intro?: [number, number] | null; externalUrl: string; message: string; servers: { id: number; name: string; language: string }[] };
+
 async function get<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(`/api/anikoto${path}`, { signal });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Anikoto is unavailable. Please try again.');
   return data;
 }
+
 export default function EpisodesPage() {
-  const { id } = useParams();
+  const { id, episodeNumber } = useParams();
   const { anime, loading, error } = useCatalog();
-  const item = anime.find(a => a.id === id);
-  if (loading || error) return <CatalogState />;
+  const rawId = (id || '').trim();
+  const cleanId = decodeURIComponent(rawId).toLowerCase();
+  const item = anime.find(a =>
+    a.id === rawId ||
+    a.id === resolveId(rawId) ||
+    a.title.toLowerCase() === cleanId ||
+    a.title.toLowerCase().includes(cleanId.replace(/-/g, ' '))
+  ) || anime[0];
+
+  if (loading) return <CatalogState />;
+  if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
-  return <EpisodeBrowser key={item.id} id={item.id} title={item.title} />;
+
+  return <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />;
 }
-function EpisodeBrowser({ id, title }: { id: string; title: string }) {
-  const [query, setQuery] = useState(title);
-  const [search, setSearch] = useState(title);
-  const [matches, setMatches] = useState<Match[]>([]);
+
+function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {
+  const navigate = useNavigate();
   const [source, setSource] = useState<Match | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [episode, setEpisode] = useState('');
+  const [episode, setEpisode] = useState(initialEpisode || '');
   const [server, setServer] = useState(0);
   const [player, setPlayer] = useState<Player | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(animeItem.title);
+  const [matches, setMatches] = useState<Match[]>([]);
+
+  // 1. Resolve source anime and load episodes automatically
   useEffect(() => {
     const controller = new AbortController();
-    setBusy(true); setError(''); setPlayer(null);
-    async function load() {
+    let cancelled = false;
+    setBusy(true);
+    setError('');
+
+    async function loadSourceAndEpisodes() {
       try {
-        if (!source) {
-          const data = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(search)}`, controller.signal);
-          if (!controller.signal.aborted) setMatches(data.items);
-        } else if (!episode) {
-          const data = await get<{ episodes: Episode[] }>(`/${source.slug}/episodes`, controller.signal);
-          if (!controller.signal.aborted) setEpisodes(data.episodes);
-        } else {
-          const data = await get<Player>(`/${source.slug}/episodes/${episode}/players?server=${server}`, controller.signal);
-          if (!controller.signal.aborted) setPlayer(data);
+        let activeSource = source;
+        if (!activeSource) {
+          const q = searchQuery.trim() || animeItem.title;
+          const searchRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(q)}`, controller.signal);
+          let items = searchRes.items || [];
+          if (cancelled) return;
+          setMatches(items);
+
+          if (!items.length && animeItem.japaneseTitle) {
+            const jpRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(animeItem.japaneseTitle)}`, controller.signal);
+            if (jpRes.items?.length) items = jpRes.items;
+          }
+
+          if (!items.length) {
+            const simplified = q.replace(/[:\-–—].*$/, '').trim();
+            if (simplified && simplified.toLowerCase() !== q.toLowerCase()) {
+              const simpRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(simplified)}`, controller.signal);
+              if (simpRes.items?.length) items = simpRes.items;
+            }
+          }
+
+          if (!items.length) {
+            throw new Error(`No matching video streams were found for "${animeItem.title}".`);
+          }
+
+          const exact = items.find(m => m.title.toLowerCase() === animeItem.title.toLowerCase());
+          const starts = items.find(m => m.title.toLowerCase().startsWith(animeItem.title.toLowerCase()) || animeItem.title.toLowerCase().startsWith(m.title.toLowerCase()));
+          activeSource = exact || starts || items[0];
+          setSource(activeSource);
+        }
+
+        const epData = await get<{ episodes: Episode[] }>(`/${activeSource.slug}/episodes`, controller.signal);
+        if (cancelled) return;
+        setEpisodes(epData.episodes);
+
+        if (!epData.episodes.length) {
+          throw new Error('No episodes are available for this title yet.');
+        }
+
+        const target = (initialEpisode && epData.episodes.some(e => e.number === initialEpisode))
+          ? initialEpisode
+          : (episode && epData.episodes.some(e => e.number === episode))
+            ? episode
+            : epData.episodes[0].number;
+
+        setEpisode(target);
+
+        if (initialEpisode !== target) {
+          navigate(`/anime/${animeItem.id}/episodes/${target}`, { replace: true });
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Unable to load Anikoto.');
-      } finally { if (!controller.signal.aborted) setBusy(false); }
+        if (!cancelled && !controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : 'Unable to load Anikoto episodes.');
+        }
+      } finally {
+        if (!cancelled && !controller.signal.aborted) setBusy(false);
+      }
     }
-    load();
-    return () => controller.abort();
-  }, [source, episode, server, search, retry]);
+
+    void loadSourceAndEpisodes();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [animeItem.id, source, retry]);
+
+  // 2. Keep episode in sync when URL changes (e.g. back/forward button)
+  useEffect(() => {
+    if (initialEpisode && initialEpisode !== episode && episodes.some(e => e.number === initialEpisode)) {
+      setEpisode(initialEpisode);
+      setServer(0);
+      setPlayer(null);
+    }
+  }, [initialEpisode, episodes]);
+
+  // 3. Load player when source, episode or server changes
+  useEffect(() => {
+    if (!source || !episode) return;
+    const controller = new AbortController();
+    let cancelled = false;
+    setBusy(true);
+    setError('');
+
+    async function loadPlayer() {
+      try {
+        const data = await get<Player>(`/${source!.slug}/episodes/${episode}/players?server=${server}`, controller.signal);
+        if (!cancelled) setPlayer(data);
+      } catch (e) {
+        if (!cancelled && !controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : 'Unable to load player.');
+        }
+      } finally {
+        if (!cancelled && !controller.signal.aborted) setBusy(false);
+      }
+    }
+
+    void loadPlayer();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [source, episode, server, retry]);
+
   const index = episodes.findIndex(e => e.number === episode);
-  function selectEpisode(number: string) { setPlayer(null); setEpisode(number); setServer(0); }
-  return <div className="page watch-page provider-page">
-    <Link className="back-link" to={`/anime/${id}`}>← {title}</Link>
-    <span className="eyebrow">EPISODES · ANIKOTO</span>
-    <h1>{source?.title || title}</h1>
-    {busy && <p role="status">Loading {episode ? 'player' : source ? 'episodes' : 'matches'}…</p>}
-    {error && <div role="alert"><p>{error}</p><button className="button secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>}
-    {!source ? <>
-      <p className="muted">Choose the matching title and season on Anikoto.</p>
-      <form className="provider-search" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); setRetry(n => n + 1); }}>
-        <input aria-label="Search Anikoto" value={query} onChange={e => setQuery(e.target.value)} maxLength={180} required />
-        <button className="button primary">Search</button>
-      </form>
-      {!busy && !error && matches.length === 0 && <p>No matching titles. Try the Japanese title or a shorter name.</p>}
-      <div className="episode-list">{matches.map(match => <button className="episode-row" key={match.slug} onClick={() => { setEpisodes([]); setSource(match); }}><strong>{match.title}</strong><span>Choose →</span></button>)}</div>
-    </> : <>
-      <button className="text-link" onClick={() => { setSource(null); setEpisode(''); setEpisodes([]); }}>Change title / season</button>
-      <div className="watch-layout">
-        <section>
-          {episode && <h2>Episode {episode} — {episodes[index]?.title || `Episode ${episode}`}</h2>}
-          {player && <>
-            <label className="provider-server">Server and language
-              <select value={server} onChange={e => setServer(Number(e.target.value))}>{player.servers.map(s => <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>)}</select>
-            </label>
-            {player.url ? <CinemaPlayer key={player.url} url={player.url} intro={player.intro} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
-            <p className="muted">Player hosted by Anikoto’s video provider. Availability may vary.</p>
-            <a className="text-link" href={player.externalUrl} target="_blank" rel="noreferrer">Player not working? Open episode on Anikoto ↗</a>
-          </>}
-          {!episode && !busy && !error && <p className="muted">{episodes.length ? 'Choose an episode to start watching.' : 'No episodes are available for this title yet.'}</p>}
-          {episode && <div className="episode-controls">
-            <button className="button secondary" disabled={index <= 0} onClick={() => selectEpisode(episodes[index - 1].number)}>← Previous</button>
-            <button className="button primary" disabled={index < 0 || index >= episodes.length - 1} onClick={() => selectEpisode(episodes[index + 1].number)}>Next →</button>
-          </div>}
-        </section>
-        <aside><h2>Episodes ({episodes.length})</h2><div className="provider-episodes">{episodes.map(e => <button key={e.number} className={`episode-row ${e.number === episode ? 'selected' : ''}`} aria-current={e.number === episode ? 'true' : undefined} onClick={() => selectEpisode(e.number)}>
-          <span className="episode-number">{e.number}</span><div><strong>{e.title || `Episode ${e.number}`}</strong><span>{[e.sub && 'Sub', e.dub && 'Dub'].filter(Boolean).join(' · ')}</span></div>
-        </button>)}</div></aside>
+
+  function selectEpisode(number: string) {
+    setPlayer(null);
+    setEpisode(number);
+    setServer(0);
+    navigate(`/anime/${animeItem.id}/episodes/${number}`);
+  }
+
+  async function handleManualSearch() {
+    if (!searchQuery.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(searchQuery.trim())}`, AbortSignal.timeout(8000));
+      setMatches(res.items || []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Search failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="page watch-page provider-page">
+      <Link className="back-link" to={`/anime/${animeItem.id}`}>← {animeItem.title}</Link>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+        <div>
+          <span className="eyebrow">EPISODES · ANIKOTO</span>
+          <h1 style={{ margin: 0 }}>{source?.title || animeItem.title}</h1>
+        </div>
+        <button
+          className="text-link"
+          onClick={() => setShowSearch(s => !s)}
+          style={{ fontSize: '13px', cursor: 'pointer' }}
+        >
+          {showSearch ? 'Hide search' : 'Change season / search'}
+        </button>
       </div>
-    </>}
-  </div>;
+
+      {showSearch && (
+        <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '16px', borderRadius: '12px', margin: '12px 0 20px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <form className="provider-search" onSubmit={e => { e.preventDefault(); void handleManualSearch(); }} style={{ marginBottom: matches.length ? '12px' : 0 }}>
+            <input
+              aria-label="Search Anikoto"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              maxLength={180}
+              placeholder="Search title or season…"
+              required
+            />
+            <button className="button primary" type="submit">Search</button>
+          </form>
+          {matches.length > 0 && (
+            <div className="episode-list" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+              {matches.map(m => (
+                <button
+                  key={m.slug}
+                  className={`episode-row ${source?.slug === m.slug ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSource(m);
+                    setEpisodes([]);
+                    setPlayer(null);
+                    setShowSearch(false);
+                    setRetry(n => n + 1);
+                  }}
+                >
+                  <strong>{m.title}</strong>
+                  <span>{source?.slug === m.slug ? 'Current' : 'Select season →'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {busy && !player && <p role="status">Loading episode {episode || '1'}…</p>}
+      {error && (
+        <div role="alert">
+          <p>{error}</p>
+          <button className="button secondary" onClick={() => setRetry(n => n + 1)}>Try again</button>
+        </div>
+      )}
+
+      {episodes.length > 0 && (
+        <div className="watch-layout">
+          <section>
+            <h2>Episode {episode || '1'} — {episodes[index]?.title || `Episode ${episode || '1'}`}</h2>
+            {player && (
+              <>
+                <label className="provider-server">
+                  Server and language
+                  <select value={server} onChange={e => setServer(Number(e.target.value))}>
+                    {player.servers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </label>
+                {player.url ? (
+                  <CinemaPlayer
+                    key={player.url}
+                    url={player.url}
+                    intro={player.intro}
+                    title={`${source?.title || animeItem.title} · Episode ${episode}`}
+                    onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined}
+                  />
+                ) : (
+                  <div className="cinema-unavailable"><p>{player.message}</p></div>
+                )}
+                <p className="muted">Player hosted by Anikoto’s video provider. Availability may vary.</p>
+                <a className="text-link" href={player.externalUrl} target="_blank" rel="noreferrer">
+                  Player not working? Open episode on Anikoto ↗
+                </a>
+              </>
+            )}
+
+            <div className="episode-controls">
+              <button
+                className="button secondary"
+                disabled={index <= 0}
+                onClick={() => selectEpisode(episodes[index - 1].number)}
+              >
+                ← Previous
+              </button>
+              <button
+                className="button primary"
+                disabled={index < 0 || index >= episodes.length - 1}
+                onClick={() => selectEpisode(episodes[index + 1].number)}
+              >
+                Next →
+              </button>
+            </div>
+          </section>
+
+          <aside>
+            <h2>Episodes ({episodes.length})</h2>
+            <div className="provider-episodes">
+              {episodes.map(e => (
+                <button
+                  key={e.number}
+                  className={`episode-row ${e.number === episode ? 'selected' : ''}`}
+                  aria-current={e.number === episode ? 'true' : undefined}
+                  onClick={() => selectEpisode(e.number)}
+                >
+                  <span className="episode-number">{e.number}</span>
+                  <div>
+                    <strong>{e.title || `Episode ${e.number}`}</strong>
+                    <span>{[e.sub && 'Sub', e.dub && 'Dub'].filter(Boolean).join(' · ')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
+  );
 }
