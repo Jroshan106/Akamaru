@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { useCatalog } from '../lib/catalog';
 import { CatalogState, NotFound } from '../components/CatalogUI';
 import CinemaPlayer from '../components/CinemaPlayer';
+import DirectSourcePlayer from '../components/DirectSourcePlayer';
+import ProviderPlayer from '../components/ProviderPlayer';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
@@ -33,6 +35,7 @@ function EpisodeBrowser({ id, title }: { id: string; title: string }) {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [playerMode, setPlayerMode] = useState('direct');
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true); setError(''); setPlayer(null);
@@ -75,12 +78,23 @@ function EpisodeBrowser({ id, title }: { id: string; title: string }) {
       <button className="text-link" onClick={() => { setSource(null); setEpisode(''); setEpisodes([]); }}>Change title / season</button>
       <div className="watch-layout">
         <section>
-          {episode && <h2>Episode {episode} — {episodes[index]?.title}</h2>}
-          {player && <>
+          {episode && (
+            <label className="provider-server">
+              Player engine
+              <select value={playerMode} onChange={e => setPlayerMode(e.target.value)}>
+                <option value="direct">Akamaru Cinema Player · Koto Direct (1080p, Subs, Speed, Skip)</option>
+                <option value="existing">Anikoto Server Embed · Akamaru Controls</option>
+                <option value="original">Provider Raw Embed</option>
+              </select>
+            </label>
+          )}
+          {episode && playerMode === 'direct' && <DirectSourcePlayer animeId={id} episode={episode} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} />}
+          {player && playerMode !== 'direct' && <>
             <label className="provider-server">Server and language
               <select value={server} onChange={e => setServer(Number(e.target.value))}>{player.servers.map(s => <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>)}</select>
             </label>
-            {player.url ? <CinemaPlayer key={player.url} url={player.url} intro={player.intro} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
+            {playerMode === 'original' && <p className="muted">Original provider controls include the options available on that server. Provider ads and popups may appear. Akamaru’s auto-next and intro settings apply only to Akamaru controls.</p>}
+            {player.url ? playerMode === 'original' ? <ProviderPlayer key={player.url} url={player.url} title={`${source.title} · Episode ${episode}`} /> : <CinemaPlayer key={player.url} url={player.url} intro={player.intro} title={`${source.title} · Episode ${episode}`} onNext={index >= 0 && index < episodes.length - 1 ? () => selectEpisode(episodes[index + 1].number) : undefined} /> : <div className="cinema-unavailable"><p>{player.message}</p></div>}
             <p className="muted">Player hosted by Anikoto’s video provider. Availability may vary.</p>
             <a className="text-link" href={player.externalUrl} target="_blank" rel="noreferrer">Player not working? Open episode on Anikoto ↗</a>
           </>}

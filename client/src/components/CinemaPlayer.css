@@ -1,6 +1,9 @@
 .cinema-player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; color: #fff; overflow: hidden; border-radius: 14px; isolation: isolate; }
 .cinema-player:fullscreen { width: 100vw; height: 100dvh; border-radius: 0; aspect-ratio: auto; }
 .cinema-source { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.provider-original-player { width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; border-radius: 14px; }
+.provider-original-player iframe { display: block; width: 100%; height: 100%; border: 0; }
+.cinema-menu select { max-width: 65%; }
 .cinema-click-surface { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: pointer; z-index: 1; }
 .cinema-heading { position: absolute; inset: 0 0 auto; z-index: 2; padding: 24px 24px 45px; background: linear-gradient(#000d, transparent); pointer-events: none; opacity: 0; transition: opacity .2s; }
 .cinema-heading span { display: block; color: #ff537e; font-size: 10px; font-weight: 800; letter-spacing: 3px; margin-bottom: 8px; }
