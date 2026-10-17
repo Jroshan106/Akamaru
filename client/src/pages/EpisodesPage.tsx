@@ -5,6 +5,7 @@ import { resolveId } from '../lib/jikan';
 import { CatalogState, NotFound } from '../components/CatalogUI';
 import CinemaPlayer from '../components/CinemaPlayer';
 import type { Anime } from '../types';
+import KotoEpisodes from '../components/KotoEpisodes';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
@@ -18,6 +19,7 @@ async function get<T>(path: string, signal: AbortSignal): Promise<T> {
 }
 
 export default function EpisodesPage() {
+  const [mode, setMode] = useState('koto');
   const { id, episodeNumber } = useParams();
   const { anime, loading, error } = useCatalog();
   const rawId = (id || '').trim();
@@ -27,13 +29,13 @@ export default function EpisodesPage() {
     a.id === resolveId(rawId) ||
     a.title.toLowerCase() === cleanId ||
     a.title.toLowerCase().includes(cleanId.replace(/-/g, ' '))
-  ) || anime[0];
+  );
 
   if (loading) return <CatalogState />;
   if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
 
-  return <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />;
+  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<select value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Koto · Custom player</option><option value="legacy">Anikoto · Existing player</option></select></label></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
 }
 
 function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {

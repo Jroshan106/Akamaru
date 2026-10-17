@@ -82,4 +82,10 @@ The proxy allows only anime search, top anime, genres, and numeric anime details
 
 ## Player
 
-The episode page uses **Akamaru Cinema Player** with custom controls, auto-skip intro, auto-next episode, volume, fullscreen, and integrated server & language selection (Sub/Dub).
+The episode page defaults to **Koto · Custom player**. The server searches Anikage's catalog and the client selects only an exact MyAnimeList ID match automatically. If no exact match exists, the viewer chooses the title/season. Actual episode lists, Sub/Dub sources and skip timings come from the Koto service. No pasted watch link is required. **Anikoto · Existing player** remains an explicit fallback.
+
+This is an integration with Anikage's undocumented Koto source service, not an independent extractor or a copy of its backend. Video is played by HTML video and hls.js inside Akamaru, with captions, available manifest qualities, speed (0.5–3x), ten-second seeking, intro skipping, fullscreen and next-episode autoplay. Quality choices depend on the stream; an episode with only 1080p offers Auto and 1080p. Autoplay can require a user gesture under browser policy.
+
+The existing same-origin media gateway forwards requests to the fixed `og.bakayaro.live` service with its provider request headers. Master/variant playlists, segment and key URLs, and subtitles stay on the gateway; remote redirects and foreign playlist resource hosts are rejected. Metadata is briefly cached and deduplicated. Temporary media URLs are not saved to disk. The upstream service still controls availability and may change its API or request requirements.
+
+The earlier direct-browser experiment was rejected by the media service for Akamaru's domain. The gateway changes that request path; verify the deployed API and playback after deployment rather than assuming a local test proves Vercel access. Media segments consume hosting bandwidth and function requests; production response-size, execution-time and usage limits still apply. No deployment is performed by a local build.

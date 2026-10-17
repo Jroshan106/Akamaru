@@ -4,7 +4,7 @@ import './CinemaPlayer.css';
 import type Hls from 'hls.js';
 
 export type SubtitleTrack = { url: string; label: string; default?: boolean };
-type Props = { url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; direct?: boolean; tracks?: SubtitleTrack[] };
+type Props = { url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; direct?: boolean; tracks?: SubtitleTrack[]; autoStart?: boolean };
 
 function toProxiedUrl(rawUrl: string): string {
   if (rawUrl.startsWith('https://og.bakayaro.live/m3u8/')) {
@@ -34,7 +34,7 @@ function clock(value: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export default function CinemaPlayer({ url, title, intro, outro, onNext, direct = false, tracks = [] }: Props) {
+export default function CinemaPlayer({ url, title, intro, outro, onNext, direct = false, tracks = [], autoStart = false }: Props) {
   const playbackUrl = direct ? toProxiedUrl(url) : url;
   const proxiedTracks = tracks.map(t => ({ ...t, url: toProxiedTrackUrl(t.url) }));
 
@@ -46,7 +46,7 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
   const [speed, setSpeed] = useState(() => {
     try {
       const s = Number(localStorage.getItem('akamaru-playback-speed'));
-      return Number.isFinite(s) && s > 0 ? s : 1;
+      return Number.isFinite(s) && s >= .5 && s <= 3 ? s : 1;
     } catch { return 1; }
   });
   const frame = useRef<HTMLIFrameElement>(null);
@@ -266,13 +266,14 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
       if (event.key === 'm') mute();
       if (event.key === 'f') void expand();
     }} tabIndex={0} role="region" aria-label={`${title} video player`}>
-    {direct ? <video ref={video} className="cinema-source" playsInline crossOrigin="anonymous" preload="metadata"
+    {direct ? <video ref={video} className="cinema-source" playsInline crossOrigin="anonymous" preload="metadata" autoPlay={autoStart}
       onLoadedMetadata={() => {
         setReady(true);
         setSlow(false);
         const dur = video.current?.duration || 0;
         setDuration(dur);
         if (video.current) video.current.playbackRate = speed;
+        if (autoStart) void video.current?.play().catch(() => setNotice('Press Play to continue this episode.'));
       }}
       onPlay={() => {
         setPlaying(true);
@@ -292,11 +293,6 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
         }
         if (settings.intro && v.currentTime < settings.intro[0]) {
           introSkipped.current = false;
-        }
-        // Auto-advance near the end of video
-        if (settings.autoNext && settings.onNext && !advanced.current && v.duration > 0 && v.currentTime >= v.duration - 0.8 && Date.now() - lastSeek.current > 3000) {
-          advanced.current = true;
-          settings.onNext();
         }
       }}
       onEnded={() => {
