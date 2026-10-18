@@ -1,19 +1,44 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, Star, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Play, Pause, ChevronLeft, ChevronRight, Star, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import SeasonalAnime from '../components/SeasonalAnime';
 import { useCatalog } from "../lib/catalog";
 import { AnimeCard, CatalogState, SaveButton } from "../components/CatalogUI";
 export default function HomePage() {
   const { anime, loading, error } = useCatalog();
   const [index, setIndex] = useState(0);
-  if (loading || error) return <CatalogState />;
-  const featured = anime[index];
+  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(document.hidden);
+  const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const count = Math.min(6, anime.length);
+  const slide = count ? index % count : 0;
+  const running = !paused && !hovered && !focused && !hidden && !reduced;
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const motion = () => setReduced(media.matches);
+    const visibility = () => setHidden(document.hidden);
+    media.addEventListener('change', motion); document.addEventListener('visibilitychange', visibility);
+    return () => { media.removeEventListener('change', motion); document.removeEventListener('visibilitychange', visibility); };
+  }, []);
+  useEffect(() => {
+    if (!running || loading || error || count < 2) return;
+    const timer = window.setTimeout(() => setIndex(i => (i + 1) % count), 6500);
+    return () => window.clearTimeout(timer);
+  }, [running, loading, error, count, index]);
+  const move = (delta: number) => setIndex(i => (i + delta + count) % count);
+  const shortcuts = <div className="page workspace-shortcuts"><Link to="/watchlist"><strong>Your library</strong><small>Saved titles, organized your way</small></Link><Link to="/browse"><strong>Find your next watch</strong><small>Search titles and explore genres</small></Link><Link to="/local"><strong>Play a local video</strong><small>Open a file from your device</small></Link></div>;
+  if (loading || error) return <>{shortcuts}<CatalogState /><div className="page"><SeasonalAnime/></div></>;
+  const featured = anime[slide];
   if (!featured)
     return <div className="empty">The catalog is coming soon.</div>;
   return (
     <>
-      <section className="hero">
+      {shortcuts}
+      <section className="hero animated-hero" aria-label="Featured anime slideshow" aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}>
         <img
+          key={`art-${featured.id}`}
           className="hero-art"
           src={featured.coverImage}
           alt=""
@@ -21,7 +46,7 @@ export default function HomePage() {
           decoding="async"
         />
         <div className="hero-shade" />
-        <div className="hero-content">
+        <div className="hero-content" key={`content-${featured.id}`}>
           <span className="eyebrow">
             <Sparkles size={14} /> THE SPOTLIGHT
           </span>
@@ -59,23 +84,25 @@ export default function HomePage() {
         </div>
         <div className="hero-bottom">
           <span>
-            <b>0{index + 1}</b> / 0{Math.min(6, anime.length)}
+            <b>0{slide + 1}</b> / 0{count}
           </span>
           <div className="hero-dots">
             {anime.slice(0, 6).map((a, i) => (
               <button
                 key={a.id}
                 aria-label={`Feature ${a.title}`}
-                aria-pressed={index === i}
-                className={index === i ? "active" : ""}
+                aria-pressed={slide === i}
+                className={slide === i ? "active" : ""}
                 onClick={() => setIndex(i)}
               />
             ))}
           </div>
+          <div className="hero-navigation"><button aria-label="Previous featured anime" onClick={() => move(-1)} disabled={count < 2}><ChevronLeft size={18}/></button><button aria-label={paused ? 'Resume slideshow' : 'Pause slideshow'} aria-pressed={paused} onClick={() => setPaused(p => !p)} disabled={reduced}>{paused || reduced ? <Play size={16}/> : <Pause size={16}/>}</button><button aria-label="Next featured anime" onClick={() => move(1)} disabled={count < 2}><ChevronRight size={18}/></button></div>
           <span className="hero-caption">FIND YOUR NEXT OBSESSION</span>
         </div>
       </section>
       <div className="page">
+        <SeasonalAnime/>
         <section className="catalog-section">
           <div className="section-heading">
             <div>

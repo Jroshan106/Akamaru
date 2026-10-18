@@ -1,8 +1,9 @@
+import ThemedSelect from '../components/ThemedSelect';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../lib/catalog';
 import { resolveId } from '../lib/jikan';
-import { CatalogState, NotFound } from '../components/CatalogUI';
+import { CatalogState, NotFound, LoadingIndicator } from '../components/CatalogUI';
 import CinemaPlayer from '../components/CinemaPlayer';
 import type { Anime } from '../types';
 import KotoEpisodes from '../components/KotoEpisodes';
@@ -19,7 +20,13 @@ async function get<T>(path: string, signal: AbortSignal): Promise<T> {
 }
 
 export default function EpisodesPage() {
-  const [mode, setMode] = useState('koto');
+  const [mode, updateMode] = useState(() => {
+    try { return localStorage.getItem('akamaru-source') === 'koto' ? 'koto' : 'legacy'; } catch { return 'legacy'; }
+  });
+  const setMode = (value: string) => {
+    updateMode(value);
+    try { localStorage.setItem('akamaru-source', value); } catch { /* Session preference still works. */ }
+  };
   const { id, episodeNumber } = useParams();
   const { anime, loading, error } = useCatalog();
   const rawId = (id || '').trim();
@@ -35,7 +42,7 @@ export default function EpisodesPage() {
   if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
 
-  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<select value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Koto · Custom player</option><option value="legacy">Anikoto · Existing player</option></select></label></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
+  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<ThemedSelect aria-label="Playback source" value={mode} onChange={e => setMode(e.target.value)}><option value="legacy">Anikoto · Embedded source</option><option value="koto">Koto · Direct source</option></ThemedSelect></label><p className="muted">{mode === 'koto' ? 'Direct playback supports quality and captions when provided. This source may be unavailable on the deployed site.' : 'Episodes come from an external provider. Available controls and playback depend on that provider.'}</p></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
 }
 
 function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {
@@ -87,8 +94,12 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
           }
 
           const exact = items.find(m => m.title.toLowerCase() === animeItem.title.toLowerCase());
-          const starts = items.find(m => m.title.toLowerCase().startsWith(animeItem.title.toLowerCase()) || animeItem.title.toLowerCase().startsWith(m.title.toLowerCase()));
-          activeSource = exact || starts || items[0];
+          setMatches(items);
+          if (!exact) {
+            setShowSearch(true);
+            throw new Error('Choose the matching title and season below to load episodes.');
+          }
+          activeSource = exact;
           setSource(activeSource);
         }
 
@@ -241,7 +252,7 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
         </div>
       )}
 
-      {busy && !player && <p role="status">Loading episode {episode || '1'}…</p>}
+      {busy && !player && <LoadingIndicator>Loading episode {episode || '1'}…</LoadingIndicator>}
       {error && (
         <div role="alert">
           <p>{error}</p>
@@ -257,11 +268,11 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
               <>
                 <label className="provider-server">
                   Server and language
-                  <select value={server} onChange={e => setServer(Number(e.target.value))}>
+                  <ThemedSelect aria-label="Server and language" value={server} onChange={e => setServer(Number(e.target.value))}>
                     {player.servers.map(s => (
                       <option key={s.id} value={s.id}>{s.name} · {s.language.toUpperCase()}</option>
                     ))}
-                  </select>
+                  </ThemedSelect>
                 </label>
                 {player.url ? (
                   <CinemaPlayer
@@ -301,7 +312,7 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
 
           <aside>
             <h2>Episodes ({episodes.length})</h2>
-            <div className="provider-episodes">
+            <div className="provider-episodes" tabIndex={0} role="region" aria-label="Scrollable episode list">
               {episodes.map(e => (
                 <button
                   key={e.number}
@@ -323,3 +334,6 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
     </div>
   );
 }
+
+
+

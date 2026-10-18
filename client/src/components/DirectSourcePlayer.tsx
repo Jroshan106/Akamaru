@@ -1,3 +1,4 @@
+import ThemedSelect from './ThemedSelect';
 import { useEffect, useState } from 'react';
 import CinemaPlayer, { SubtitleTrack } from './CinemaPlayer';
 
@@ -66,10 +67,10 @@ export default function DirectSourcePlayer({ animeId, episode, title, onNext }: 
       </p>
       <label className="provider-server" style={{ margin: 0 }}>
         Audio:
-        <select value={lang} onChange={e => setLang(e.target.value)}>
+        <ThemedSelect aria-label="Audio language" value={lang} onChange={e => setLang(e.target.value)}>
           <option value="sub">Sub (Japanese)</option>
           <option value="dub">Dub (English)</option>
-        </select>
+        </ThemedSelect>
       </label>
     </div>
     {busy && <p role="status">Loading direct video source…</p>}
@@ -88,3 +89,5 @@ export default function DirectSourcePlayer({ animeId, episode, title, onNext }: 
     )}
   </div>;
 }
+
+

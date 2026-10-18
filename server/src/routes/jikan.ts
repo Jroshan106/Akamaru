@@ -10,7 +10,8 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
   const allowedQuery = new Set(['q', 'page', 'limit', 'genres', 'status', 'order_by', 'sort', 'sfw']);
   router.get('*', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!/^\/(top\/anime|genres\/anime|anime(?:\/[1-9]\d*)?)$/.test(req.path)) {
+    const seasonal = /^\/seasons\/[12]\d{3}\/(winter|spring|summer|fall)$/.test(req.path);
+    if (!seasonal && !/^\/(top\/anime|genres\/anime|anime(?:\/[1-9]\d*)?)$/.test(req.path)) {
       res.status(404).json({ error: 'Catalog endpoint not found' }); return;
     }
     const query = new URLSearchParams();
@@ -23,7 +24,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
       }
       query.set(key, value);
     }
-    if (req.path === '/anime' || req.path === '/top/anime') {
+    if (seasonal || req.path === '/anime' || req.path === '/top/anime') {
       query.set('sfw', 'true');
       const limit = Number(query.get('limit') || 24);
       const page = Number(query.get('page') || 1);

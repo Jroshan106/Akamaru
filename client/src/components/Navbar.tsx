@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Search, Bookmark, House, Compass } from "lucide-react";
+import { Search, Bookmark, House, Compass, FolderOpen } from "lucide-react";
 import { FormEvent, useState } from "react";
 export default function Navbar() {
   const [query, setQuery] = useState("");
@@ -19,8 +19,9 @@ export default function Navbar() {
         </NavLink>
         <NavLink to="/browse">Browse anime</NavLink>
         <NavLink to="/watchlist">
-          <Bookmark size={16} /> My list
+          <Bookmark size={16} /> Library
         </NavLink>
+        <NavLink to="/local">Local player</NavLink>
       </nav>
       <form onSubmit={search} className="nav-search">
         <Search size={17} />
@@ -39,7 +40,8 @@ export default function Navbar() {
     <nav className="mobile-navigation" aria-label="Mobile navigation">
       <NavLink to="/" end><House size={21} /><span>Discover</span></NavLink>
       <NavLink to="/browse"><Compass size={21} /><span>Explore</span></NavLink>
-      <NavLink to="/watchlist"><Bookmark size={21} /><span>My list</span></NavLink>
+      <NavLink to="/watchlist"><Bookmark size={21} /><span>Library</span></NavLink>
+      <NavLink to="/local"><FolderOpen size={21} /><span>Local</span></NavLink>
     </nav></>
   );
 }

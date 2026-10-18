@@ -5,6 +5,7 @@ import {
   useState,
   ReactNode,
   useRef,
+  useCallback,
 } from "react";
 import { useLocation } from "react-router-dom";
 import type { Anime } from "../types";
@@ -29,6 +30,7 @@ type Catalog = {
   genres: Genre[];
   hasNext: boolean;
   total: number;
+  remember: (items: Anime[]) => void;
 };
 const Context = createContext<Catalog>(null!);
 function readSaved(): string[] {
@@ -59,6 +61,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [hasNext, setHasNext] = useState(false);
   const [total, setTotal] = useState(0);
   const known = useRef(new Map<string, Anime>());
+  const remember = useCallback((items: Anime[]) => { items.forEach(item => known.current.set(item.id, item)); }, []);
   const { pathname, search } = useLocation();
   const watchlistKey = pathname === "/watchlist" ? saved.join(",") : "";
   useEffect(() => {
@@ -72,7 +75,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         let count = 0;
         let next = false;
         const detailId = pathname.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
-        if (detailId) {
+        if (pathname === '/local') {
+          // Device playback does not depend on the online catalog.
+          items = [];
+        } else if (detailId) {
           const id = resolveId(detailId);
           if (/^\d+$/.test(id)) {
             const response = await jikanRequest<{ data: JikanAnime }>(
@@ -196,6 +202,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         genres,
         hasNext,
         total,
+        remember,
       }}
     >
       {children}

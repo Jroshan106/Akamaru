@@ -51,6 +51,26 @@ test('proxy rejects unsupported endpoints and malformed supported filters', asyn
   });
 });
 
+test('season rankings use the fixed catalog host and enforce safe limits', async () => {
+  await withProxy(async url => {
+    const target = new URL(url);
+    assert.equal(target.origin, 'https://api.tenrai.org');
+    assert.equal(target.pathname, '/v1/seasons/2026/fall');
+    assert.equal(target.searchParams.get('sfw'), 'true');
+    assert.equal(target.searchParams.get('limit'), '10');
+    assert.equal(target.searchParams.get('order_by'), 'score');
+    assert.equal(target.searchParams.get('sort'), 'desc');
+    return Response.json({ data: [{ mal_id: 1, score: 9 }] });
+  }, async base => {
+    const result = await fetch(`${base}/seasons/2026/fall?limit=10&order_by=score&sort=desc&sfw=false`);
+    assert.equal(result.status, 200);
+    assert.equal((await result.json()).data.length, 1);
+    for (const path of ['/seasons/2026/fall?limit=100', '/seasons/2026/fall?page=0', '/seasons/2026/invalid', '/seasons/no/fall']) {
+      assert.ok([400,404].includes((await fetch(base + path)).status));
+    }
+  });
+});
+
 test('Vercel rewrite captures do not reject valid requests or reach Jikan', async () => {
   const targets = [];
   await withProxy(async url => {

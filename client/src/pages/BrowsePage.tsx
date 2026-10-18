@@ -1,3 +1,4 @@
+import ThemedSelect from '../components/ThemedSelect';
 import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useCatalog } from "../lib/catalog";
@@ -67,7 +68,8 @@ export default function BrowsePage({
         </label>
         <label>
           Genre
-          <select
+          <ThemedSelect
+            aria-label="Genre"
             value={genre}
             onChange={(e) => update("genre", e.target.value)}
           >
@@ -78,11 +80,12 @@ export default function BrowsePage({
             ).map((g) => (
               <option key={g}>{g}</option>
             ))}
-          </select>
+          </ThemedSelect>
         </label>
         <label>
           Status
-          <select
+          <ThemedSelect
+            aria-label="Status"
             value={status}
             onChange={(e) => update("status", e.target.value)}
           >
@@ -90,15 +93,15 @@ export default function BrowsePage({
             {["Airing", "Completed", "Upcoming"].map((s) => (
               <option key={s}>{s}</option>
             ))}
-          </select>
+          </ThemedSelect>
         </label>
         <label>
           Sort by
-          <select value={sort} onChange={(e) => update("sort", e.target.value)}>
+          <ThemedSelect aria-label="Sort by" value={sort} onChange={(e) => update("sort", e.target.value)}>
             <option value="rating">Top rated</option>
             <option value="year">Newest</option>
             <option value="title">A–Z</option>
-          </select>
+          </ThemedSelect>
         </label>
       </div>
       {loading || error ? (
@@ -158,3 +161,4 @@ export default function BrowsePage({
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { Bookmark, Check, Star, ArrowRight } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Bookmark, Check, Star, ArrowRight, RotateCw, Sparkles } from "lucide-react";
 import type { Anime } from "../types";
 import { useCatalog } from "../lib/catalog";
 export function SaveButton({ id }: { id: string }) {
@@ -12,14 +13,15 @@ export function SaveButton({ id }: { id: string }) {
       aria-pressed={active}
       onClick={() => toggle(id)}
     >
-      {active ? <Check size={18} /> : <Bookmark size={18} />}
+      <span key={String(active)} className="save-icon">{active ? <Check size={18} /> : <Bookmark size={18} />}</span>
     </button>
   );
 }
 export function AnimeCard({ anime }: { anime: Anime }) {
+  const [loaded, setLoaded] = useState(false);
   return (
     <article className="anime-card">
-      <div className="poster">
+      <div className={`poster ${loaded ? 'poster-ready' : 'poster-loading'}`}>
         <Link to={`/anime/${anime.id}`}>
           <img
             src={anime.coverImage}
@@ -28,8 +30,10 @@ export function AnimeCard({ anime }: { anime: Anime }) {
             decoding="async"
             width={300}
             height={425}
+            onLoad={() => setLoaded(true)}
             onError={(e) => {
-              e.currentTarget.src = "/placeholder.svg";
+              setLoaded(true);
+              if (!e.currentTarget.src.endsWith('/placeholder.svg')) e.currentTarget.src = "/placeholder.svg";
             }}
           />
           <span className="poster-play">
@@ -60,14 +64,19 @@ export function AnimeCard({ anime }: { anime: Anime }) {
     </article>
   );
 }
+export function LoadingIndicator({ children = 'Finding your next adventure…' }: { children?: React.ReactNode }) {
+  return <div className="loading-indicator" role="status"><span className="loading-orbit" aria-hidden="true"><Sparkles size={20}/></span><span>{children}<span className="loading-dots" aria-hidden="true"><i/><i/><i/></span></span></div>;
+}
 export function CatalogState() {
   const { loading, error, retry } = useCatalog();
+  const { pathname } = useLocation();
+  const detail = /^\/(anime|watch)\//.test(pathname);
   if (loading)
     return (
-      <div className="empty" role="status">
-        <span className="spinner" />
-        Loading your next adventure…
-      </div>
+      <section className="catalog-loading" aria-label="Loading anime">
+        <LoadingIndicator/>
+        {detail ? <div className="skeleton-detail" aria-hidden="true"><div className="skeleton skeleton-cover"/><div><div className="skeleton skeleton-line"/><div className="skeleton skeleton-line short"/><div className="skeleton skeleton-description"/></div></div> : <div className="anime-grid skeleton-grid" aria-hidden="true">{Array.from({length:6}, (_, i) => <div key={i}><div className="skeleton skeleton-cover"/><div className="skeleton skeleton-line"/><div className="skeleton skeleton-line short"/></div>)}</div>}
+      </section>
     );
   if (error)
     return (
@@ -75,7 +84,7 @@ export function CatalogState() {
         <h2>Something went wrong</h2>
         <p>{error}</p>
         <button className="button primary" onClick={retry}>
-          Try again
+          <RotateCw size={16}/> Try again
         </button>
       </div>
     );

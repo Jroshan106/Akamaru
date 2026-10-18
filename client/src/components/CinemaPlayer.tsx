@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import ThemedSelect from './ThemedSelect';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize, Minimize, SkipForward, Settings, Captions, Monitor, X } from 'lucide-react';
 import './CinemaPlayer.css';
 import type Hls from 'hls.js';
@@ -35,6 +36,7 @@ function clock(value: number) {
 }
 
 export default function CinemaPlayer({ url, title, intro, outro, onNext, direct = false, tracks = [], autoStart = false }: Props) {
+  const speedId = useId();
   const playbackUrl = direct ? toProxiedUrl(url) : url;
   const proxiedTracks = tracks.map(t => ({ ...t, url: toProxiedTrackUrl(t.url) }));
 
@@ -121,7 +123,9 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
     v.textTracks.addEventListener('addtrack', syncTracks);
     syncTracks();
 
-    void import('hls.js').then(({ default: Engine }) => {
+    if (playbackUrl.startsWith('blob:')) {
+      v.src = playbackUrl;
+    } else void import('hls.js').then(({ default: Engine }) => {
       if (cancelled) return;
       if (Engine.isSupported()) {
         const engine = new Engine();
@@ -302,7 +306,7 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
           options.current.onNext();
         }
       }}
-      onError={() => setNotice('Video playback failed. Try switching servers or reloading.')}>
+      onError={() => setNotice(playbackUrl.startsWith('blob:') ? 'Your browser cannot play this file. Try an MP4 with H.264 video and AAC audio, or a WebM file.' : 'Video playback failed. Try switching servers or reloading.')}>
       {proxiedTracks.map((track, i) => (
         <track key={`${i}-${track.label}`} src={track.url} kind="subtitles" label={track.label} default={track.default} />
       ))}
@@ -324,22 +328,22 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
         <SkipForward size={17} /> Next episode
       </button>
     )}
-    {menu && <div className="cinema-menu" role="dialog" aria-label={menu === 'settings' ? 'Playback settings' : menu === 'subtitles' ? 'Subtitles' : 'Video quality'}>
+    {menu && <div key={menu} className="cinema-menu" role="dialog" aria-label={menu === 'settings' ? 'Playback settings' : menu === 'subtitles' ? 'Subtitles' : 'Video quality'}>
       <div className="cinema-menu-heading"><strong>{menu === 'settings' ? 'Playback settings' : menu === 'subtitles' ? 'Subtitles' : 'Video quality'}</strong><button aria-label="Close player menu" onClick={() => setMenu(null)}><X size={18} /></button></div>
       {menu === 'settings' ? <>
-        <label><span>Automatically skip intro</span><input type="checkbox" checked={autoIntro} onChange={e => { setAutoIntro(e.target.checked); saveOption('akamaru-auto-intro', e.target.checked); }} /></label>
+        <label><span>Automatically skip intro</span><input className="cinema-toggle" type="checkbox" role="switch" checked={autoIntro} onChange={e => { setAutoIntro(e.target.checked); saveOption('akamaru-auto-intro', e.target.checked); }} /></label>
         {!intro && <p>Intro timing is unavailable for this episode.</p>}
-        <label><span>Autoplay next episode</span><input type="checkbox" checked={autoNext} onChange={e => { setAutoNext(e.target.checked); saveOption('akamaru-auto-next', e.target.checked); }} /></label>
+        <label><span>Autoplay next episode</span><input className="cinema-toggle" type="checkbox" role="switch" checked={autoNext} onChange={e => { setAutoNext(e.target.checked); saveOption('akamaru-auto-next', e.target.checked); }} /></label>
         {!onNext && <p>This is the last available episode.</p>}
-        <label><span>Playback speed</span><select aria-label="Playback speed" disabled={!direct} value={speed} onChange={e => {
+        <div className="cinema-speed"><label htmlFor={speedId}><span>Playback speed</span><output>{direct ? speed : 1}×</output></label><input id={speedId} aria-label="Playback speed" aria-valuetext={`${direct ? speed : 1} times normal speed`} type="range" min="0.5" max="3" step="0.25" disabled={!direct} value={direct ? speed : 1} style={{ background: `linear-gradient(to right, #b30f3c ${((direct ? speed : 1) - .5) / 2.5 * 100}%, #ffffff20 0)` }} onChange={e => {
           const rate = Number(e.target.value);
           setSpeed(rate);
           try { localStorage.setItem('akamaru-playback-speed', String(rate)); } catch {}
           if (video.current) video.current.playbackRate = rate;
-        }}>{[.5,.75,1,1.25,1.5,1.75,2,2.5,3].map(rate => <option key={rate} value={rate}>{rate}×</option>)}</select></label>
+        }}/><div className="cinema-speed-scale"><span>0.5×</span><button type="button" disabled={!direct} onClick={() => { setSpeed(1); if (video.current) video.current.playbackRate = 1; try { localStorage.setItem('akamaru-playback-speed', '1'); } catch {} }}>Reset to 1×</button><span>3×</span></div></div>
         {!direct && <p>This video source does not expose speed control to Akamaru.</p>}
       </> : direct ? menu === 'subtitles' ? <>
-        <label>Captions<select aria-label="Subtitle language" value={caption} onChange={e => {
+        <label>Captions<ThemedSelect aria-label="Subtitle language" value={caption} onChange={e => {
           const selected = Number(e.target.value);
           setCaption(selected);
           const list = video.current?.textTracks;
@@ -353,14 +357,14 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
               localStorage.setItem('akamaru-subtitle-label', 'off');
             }
           } catch {}
-        }}><option value={-1}>Off</option>{proxiedTracks.map((t, i) => <option key={i} value={i}>{t.label}</option>)}</select></label>
+        }}><option value={-1}>Off</option>{proxiedTracks.map((t, i) => <option key={i} value={i}>{t.label}</option>)}</ThemedSelect></label>
         {!proxiedTracks.length && <p>No separate subtitles are available for this source.</p>}
       </> : <>
-        <label>Quality<select aria-label="Video quality" value={quality} disabled={!qualities.length} onChange={e => {
+        <label>Quality<ThemedSelect aria-label="Video quality" value={quality} disabled={!qualities.length} onChange={e => {
           const level = Number(e.target.value);
           setQuality(level);
           if (hls.current) hls.current.currentLevel = level;
-        }}><option value={-1}>Auto (Recommended)</option>{qualities.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</select></label>
+        }}><option value={-1}>Auto (Recommended)</option>{qualities.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</ThemedSelect></label>
         {!qualities.length && <p>Your browser manages quality automatically.</p>}
       </> : <p>{menu === 'subtitles' ? 'Subtitle tracks are managed inside the video source. Its external controls do not support changing or disabling them. Choose a Sub or Dub server below the player.' : 'Quality is managed automatically by the video source. Its external controls do not support manual quality selection.'}</p>}
     </div>}
@@ -382,3 +386,5 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
     {notice && <p className="cinema-notice" role="status">{notice}</p>}
   </div>;
 }
+
+
