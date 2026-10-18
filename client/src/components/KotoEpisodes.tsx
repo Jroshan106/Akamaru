@@ -79,7 +79,7 @@ export default function KotoEpisodes({ anime, initialEpisode }: { anime: Anime; 
         <input aria-label="Search Koto titles" value={query} onChange={e => setQuery(e.target.value)} maxLength={180} required />
         <button className="button primary">Search</button>
       </form>
-      {!busy && !matches.length && <p>No matching titles. Try another title spelling.</p>}
+      {!busy && !error && !matches.length && <p>No matching titles. Try another title spelling.</p>}
       {!source && matches.length > 0 && <p>Select the correct title and season. An exact catalog ID match was not found.</p>}
       <div className="episode-list">{matches.map(m => <button className="episode-row" key={m.slug} onClick={() => { setEpisodes([]); setStream(null); setSource(m); setChangeSource(false); navigate(`/anime/${anime.id}/episodes`, { replace: true }); }}><strong>{m.title}</strong><span>{m.year} · Select →</span></button>)}</div>
     </>}
