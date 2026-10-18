@@ -80,6 +80,25 @@ The request flow and HTML selectors were informed by [Yūzōnō's extension] dis
 
 The proxy allows only anime search, top anime, genres, and numeric anime details. It caches successful responses for five minutes, deduplicates concurrent requests, spaces upstream calls, and returns non-cacheable JSON errors on rate limits/timeouts. This requires deploying the root Vercel API function alongside the frontend. After deployment, check /api/jikan/top/anime?limit=1 returns JSON. A 502 means Vercel could not reach Tenrai; a 404 means the function/routing was not deployed. This change cannot resolve an outage at the upstream provider itself.
 
+## Cloudflare Workers deployment
+
+Deploy from the repository root with build command `npm run build` and deploy
+command `npx wrangler deploy`. The Worker name in `wrangler.jsonc` is `akamaru`
+and must match the dashboard project name. Commit the Worker configuration,
+entry point and dependency lockfile before retrying the Git-connected build.
+
+The Worker uses Cloudflare's Node HTTP adapter to run the shared Express API.
+Only `/api` and `/api/*` run through Express; static files in `client/dist` and
+React deep links are served by Workers Static Assets with SPA fallback.
+Vercel and standalone Node entry points remain separate.
+
+After building, use `npx wrangler deploy --dry-run` to validate the bundle, or
+`npx wrangler dev` to test the Workers runtime locally. Check `/api/health`,
+an unknown `/api/*` route (JSON 404), and a deep link such as
+`/anime/52991/episodes`. After deployment, test provider requests again:
+a successful Worker deployment does not establish that Anikage permits requests
+from Cloudflare or resolve an upstream HTTP 403.
+
 ## Player
 
 The episode page defaults to **Koto · Custom player**. The server searches Anikage's catalog and the client selects only an exact MyAnimeList ID match automatically. If no exact match exists, the viewer chooses the title/season. Actual episode lists, Sub/Dub sources and skip timings come from the Koto service. No pasted watch link is required. **Anikoto · Existing player** remains an explicit fallback.

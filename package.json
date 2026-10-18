@@ -2,12 +2,23 @@
   "name": "akamaru",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["client", "server"],
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "npm run build --workspace client && npm run build --workspace server",
     "start": "npm run start --workspace server",
     "test": "node --test tests/*.test.mjs"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.1"
+  },
+  "overrides": {
+    "iconv-lite": "0.7.3"
+  }
 }

@@ -6,3 +6,4 @@ dist/
 .vite/
 *.tsbuildinfo
 preview.png
+.wrangler/
