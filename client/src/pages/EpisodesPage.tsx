@@ -35,7 +35,7 @@ export default function EpisodesPage() {
   if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
 
-  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<select value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Koto · Custom player</option><option value="legacy">Anikoto · Existing player</option></select></label></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
+  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<select value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Koto · Custom player</option><option value="legacy">Anikoto · Existing player</option></select></label></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
 }
 
 function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {

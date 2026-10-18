@@ -44,7 +44,7 @@ export function createAnikageRouter(fetcher: typeof fetch = fetch) {
     if (pending.size >= 6) throw new Error('Source service is busy. Please retry shortly.');
     const work = (async () => {
       const response = await fetcher(`https://anikage.cc/api/media/anime${path}`, { redirect: 'error', signal: AbortSignal.timeout(12000), headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error('Koto catalog is unavailable. Please try again.');
+      if (!response.ok) throw new Error(`Koto's catalog provider returned HTTP ${response.status} to this server. Try the Anikoto player.`);
       const text = await response.text();
       if (text.length > 2_000_000) throw new Error('Unexpected catalog response.');
       const data = JSON.parse(text);
@@ -199,7 +199,7 @@ export function createAnikageRouter(fetcher: typeof fetch = fetch) {
       const response = await fetcher(`https://anikage.cc/api/media/anime/${id}/episodes/${episode}/sources?provider=koto&lang=${lang}&server=koto`, {
         signal: AbortSignal.timeout(12000), redirect: 'error', headers: { Accept: 'application/json' },
       });
-      if (!response.ok) throw new Error('Source service unavailable. Try the existing player.');
+      if (!response.ok) throw new Error(`Koto's stream provider returned HTTP ${response.status} to this server. Try the Anikoto player.`);
       const body = await response.text();
       if (body.length > 500000) throw new Error('Unexpected source response.');
       const data = JSON.parse(body);

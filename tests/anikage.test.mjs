@@ -41,6 +41,24 @@ test('Koto catalog preserves season IDs and actual episode numbers', async () =>
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 });
 
+test('provider failures retain upstream status without exposing upstream response bodies', async () => {
+  const app = express();
+  app.use('/api', createAnikageRouter(async () => new Response('private upstream details', { status: 403 })));
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}/api`;
+    for (const path of ['/search?q=Frieren', '/title/episodes', '/title/1']) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, 502);
+      const body = await response.json();
+      assert.match(body.error, /HTTP 403/);
+      assert.match(body.error, /Anikoto player/);
+      assert.doesNotMatch(body.error, /private upstream details/);
+    }
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+});
+
 test('direct media URLs stay on the approved media service', () => {
   assert.equal(mediaUrl('abc_123', true), 'https://og.bakayaro.live/m3u8/abc_123');
   for (const value of ['https://evil.test/file', 'http://og.bakayaro.live/a', 'https://user@og.bakayaro.live/a', '../a', null]) assert.equal(mediaUrl(value), null);

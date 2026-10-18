@@ -13,7 +13,7 @@ async function read<T>(path: string, signal: AbortSignal): Promise<T> {
   return data;
 }
 
-export default function KotoEpisodes({ anime, initialEpisode }: { anime: Anime; initialEpisode?: string }) {
+export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { anime: Anime; initialEpisode?: string; onFallback: () => void }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState(anime.title);
   const [search, setSearch] = useState(anime.title);
@@ -84,7 +84,7 @@ export default function KotoEpisodes({ anime, initialEpisode }: { anime: Anime; 
       <div className="episode-list">{matches.map(m => <button className="episode-row" key={m.slug} onClick={() => { setEpisodes([]); setStream(null); setSource(m); setChangeSource(false); navigate(`/anime/${anime.id}/episodes`, { replace: true }); }}><strong>{m.title}</strong><span>{m.year} · Select →</span></button>)}</div>
     </>}
     {busy && <p role="status">Loading {source ? `episode ${episode || 'list'}` : 'title'}…</p>}
-    {error && <div role="alert"><p>{error}</p><button className="button secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>}
+    {error && <div role="alert"><p>{error}</p><p className="muted">You can try the separate Anikoto player for this title.</p><div className="episode-controls"><button className="button primary" onClick={onFallback}>Try Anikoto player</button><button className="button secondary" onClick={() => setRetry(n => n + 1)}>Retry Koto</button></div></div>}
     {source && episodes.length > 0 && <div className="watch-layout">
       <section>
         <h2>Episode {episode} — {episodes[index]?.title || 'Unavailable'}</h2>
