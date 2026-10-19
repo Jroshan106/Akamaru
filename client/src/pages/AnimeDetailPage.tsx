@@ -12,7 +12,7 @@ export default function AnimeDetailPage() {
   return (
     <div className="page detail-page">
       <Link className="back-link" to="/browse">
-        <FontAwesomeIcon icon={byPrefixAndName.fas['chevron-left']} /> Back to anime
+        <BackChevron /> Back to anime
       </Link>
       <section className="detail-layout">
         <img className="detail-poster" src={item.coverImage} alt={item.title} />
@@ -92,3 +92,4 @@ export default function AnimeDetailPage() {
     </div>
   );
 }
+import BackChevron from '../components/BackChevron';

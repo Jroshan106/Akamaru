@@ -1,3 +1,4 @@
+import BackChevron from '../components/BackChevron';
 import ThemedSelect from '../components/ThemedSelect';
 import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -145,14 +146,14 @@ export default function BrowsePage({
                 disabled={page <= 1}
                 onClick={() => update("page", String(page - 1))}
               >
-                ← Previous page
+                <BackChevron /> Previous page
               </button>
               <button
                 className="button primary"
                 disabled={!hasNext}
                 onClick={() => update("page", String(page + 1))}
               >
-                Next page →
+                Next page <BackChevron forward />
               </button>
             </nav>
           )}
@@ -161,4 +162,3 @@ export default function BrowsePage({
     </div>
   );
 }
-

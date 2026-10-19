@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { Bookmark, Check, Star, ArrowRight, RotateCw, Sparkles } from "lucide-react";
+import { Bookmark, Check, Star, ArrowRight, RotateCw } from "lucide-react";
 import type { Anime } from "../types";
 import { useCatalog } from "../lib/catalog";
 export function SaveButton({ id }: { id: string }) {
@@ -65,12 +65,13 @@ export function AnimeCard({ anime }: { anime: Anime }) {
   );
 }
 export function LoadingIndicator({ children = 'Finding your next adventure…' }: { children?: React.ReactNode }) {
-  return <div className="loading-indicator" role="status"><span className="loading-orbit" aria-hidden="true"><Sparkles size={20}/></span><span>{children}<span className="loading-dots" aria-hidden="true"><i/><i/><i/></span></span></div>;
+  return <div className="loading-indicator" role="status"><span className="loading-bars" aria-hidden="true"><i/><i/><i/><i/></span><span>{children}</span></div>;
 }
 export function CatalogState() {
   const { loading, error, retry } = useCatalog();
   const { pathname } = useLocation();
   const detail = /^\/(anime|watch)\//.test(pathname);
+  if (loading && pathname === '/') return <section className="main-loader" role="status" aria-label="Loading Akamaru"><div className="main-loader-emblem" aria-hidden="true"><img src="/apple-touch-icon.png" alt="" width="100" height="100"/><span/></div><span className="eyebrow">YOUR NEXT ADVENTURE</span><h2>A story is waiting.</h2><p>Getting your anime ready...</p><span className="loading-bars" aria-hidden="true"><i/><i/><i/><i/></span></section>;
   if (loading)
     return (
       <section className="catalog-loading" aria-label="Loading anime">

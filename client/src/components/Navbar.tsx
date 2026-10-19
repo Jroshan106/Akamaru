@@ -1,9 +1,10 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Search, Bookmark, House, Compass, FolderOpen } from "lucide-react";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Search, Bookmark, House, Compass, History } from "lucide-react";
 import { FormEvent, useState } from "react";
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const isBrowse = useLocation().pathname.replace(/\/$/, "") === "/browse";
   function search(event: FormEvent) {
     event.preventDefault();
     navigate(`/browse?search=${encodeURIComponent(query.trim())}`);
@@ -21,9 +22,9 @@ export default function Navbar() {
         <NavLink to="/watchlist">
           <Bookmark size={16} /> Library
         </NavLink>
-        <NavLink to="/local">Local player</NavLink>
+        <NavLink to="/history">History</NavLink>
       </nav>
-      <form onSubmit={search} className="nav-search">
+      {!isBrowse && <form onSubmit={search} className="nav-search">
         <Search size={17} />
         <input
           aria-label="Search anime"
@@ -34,14 +35,14 @@ export default function Navbar() {
         <button type="submit" aria-label="Search">
           ↵
         </button>
-      </form>
-      <Link className="mobile-search" to="/browse" aria-label="Search anime"><Search size={21} /></Link>
+      </form>}
+      {!isBrowse && <Link className="mobile-search" to="/browse" aria-label="Search anime"><Search size={21} /></Link>}
     </header>
     <nav className="mobile-navigation" aria-label="Mobile navigation">
       <NavLink to="/" end><House size={21} /><span>Discover</span></NavLink>
       <NavLink to="/browse"><Compass size={21} /><span>Explore</span></NavLink>
       <NavLink to="/watchlist"><Bookmark size={21} /><span>Library</span></NavLink>
-      <NavLink to="/local"><FolderOpen size={21} /><span>Local</span></NavLink>
+      <NavLink to="/history"><History size={21} /><span>History</span></NavLink>
     </nav></>
   );
 }

@@ -7,7 +7,7 @@ import WatchPage from "./pages/WatchPage";
 import AnimeDetailPage from "./pages/AnimeDetailPage";
 import EpisodesPage from "./pages/EpisodesPage";
 import LibraryPage from "./pages/LibraryPage";
-import LocalPage from "./pages/LocalPage";
+import HistoryPage from "./pages/HistoryPage";
 import { CatalogProvider } from "./lib/catalog";
 import { NotFound } from "./components/CatalogUI";
 import { useEffect } from "react";
@@ -27,7 +27,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/watchlist" element={<LibraryPage />} />
-            <Route path="/local" element={<LocalPage />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />
             <Route path="/anime/:id/episodes" element={<EpisodesPage />} />
             <Route path="/anime/:id/episodes/:episodeNumber" element={<EpisodesPage />} />

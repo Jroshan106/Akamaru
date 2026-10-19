@@ -29,6 +29,14 @@
 .provider-episodes::-webkit-scrollbar { display:none; }
 .provider-page .provider-episodes .episode-row { min-height:68px; border-radius:12px; }
 .provider-page .provider-episodes .episode-row[aria-current=true] { border-color:#b30f3c80; background:#b30f3c20; box-shadow:inset 3px 0 #b30f3c; }
+.provider-page .aligned-watch-layout { row-gap:16px; }
+.aligned-watch-layout > .playback-header { grid-column:1; grid-row:1; }
+.aligned-watch-layout > .playback-header .provider-server { margin-bottom:0; }
+.aligned-watch-layout > section { grid-column:1; grid-row:2; min-width:0; }
+.aligned-watch-layout > aside { grid-column:2; grid-row:2; }
+.back-link { display:inline-flex; align-items:center; gap:8px; }
+.back-chevron { width:.7em; height:1em; flex-shrink:0; }
+@media(max-width:1000px) { .aligned-watch-layout > aside { grid-column:1; grid-row:3; } }
 @media(max-width:1000px) { .provider-page .watch-layout { grid-template-columns:minmax(0,1fr); } .provider-page .provider-episodes { max-height:420px; } }
 @media(max-width:720px) {
  .mobile-navigation { grid-template-columns:repeat(4,1fr); }

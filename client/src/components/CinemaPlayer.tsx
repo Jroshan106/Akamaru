@@ -1,3 +1,4 @@
+import { recordWatch, WatchIdentity } from '../lib/history';
 import ThemedSelect from './ThemedSelect';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize, Minimize, SkipForward, Settings, Captions, Monitor, X } from 'lucide-react';
@@ -5,7 +6,7 @@ import './CinemaPlayer.css';
 import type Hls from 'hls.js';
 
 export type SubtitleTrack = { url: string; label: string; default?: boolean };
-type Props = { url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; direct?: boolean; tracks?: SubtitleTrack[]; autoStart?: boolean };
+type Props = { historyItem?: WatchIdentity; url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; direct?: boolean; tracks?: SubtitleTrack[]; autoStart?: boolean };
 
 function toProxiedUrl(rawUrl: string): string {
   if (rawUrl.startsWith('https://og.bakayaro.live/m3u8/')) {
@@ -35,7 +36,7 @@ function clock(value: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export default function CinemaPlayer({ url, title, intro, outro, onNext, direct = false, tracks = [], autoStart = false }: Props) {
+export default function CinemaPlayer({ historyItem, url, title, intro, outro, onNext, direct = false, tracks = [], autoStart = false }: Props) {
   const speedId = useId();
   const playbackUrl = direct ? toProxiedUrl(url) : url;
   const proxiedTracks = tracks.map(t => ({ ...t, url: toProxiedTrackUrl(t.url) }));
@@ -60,6 +61,12 @@ export default function CinemaPlayer({ url, title, intro, outro, onNext, direct 
   const [muted, setMuted] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const lastRecorded = useRef(0);
+  useEffect(() => {
+    if (!historyItem || !playing || time < 1 || Date.now() - lastRecorded.current < 5000) return;
+    lastRecorded.current = Date.now();
+    recordWatch(historyItem, time, duration);
+  }, [historyItem, playing, time, duration]);
   const [visible, setVisible] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [slow, setSlow] = useState(false);

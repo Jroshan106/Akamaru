@@ -6,7 +6,7 @@ export interface JikanAnime {
   title_english?: string | null;
   title_japanese?: string | null;
   synopsis?: string | null;
-  images?: { jpg?: { large_image_url?: string; image_url?: string } };
+  images?: { jpg?: { large_image_url?: string; image_url?: string }; webp?: { large_image_url?: string; image_url?: string } };
   genres?: { mal_id: number; name: string }[];
   status?: string;
   score?: number | null;
@@ -39,7 +39,9 @@ export function normalizeAnime(a: JikanAnime): Anime {
   const trailer = a.trailer?.youtube_id;
   const image =
     a.images?.jpg?.large_image_url ||
+    a.images?.webp?.large_image_url ||
     a.images?.jpg?.image_url ||
+    a.images?.webp?.image_url ||
     "/placeholder.svg";
   return {
     id: String(a.mal_id),

@@ -1,3 +1,4 @@
+import BackChevron from '../components/BackChevron';
 import ThemedSelect from '../components/ThemedSelect';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -200,7 +201,7 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
 
   return (
     <div className="page watch-page provider-page">
-      <Link className="back-link" to={`/anime/${animeItem.id}`}>← {animeItem.title}</Link>
+      <Link className="back-link" to={`/anime/${animeItem.id}`}><BackChevron /> {animeItem.title}</Link>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
         <div>
@@ -261,11 +262,10 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
       )}
 
       {episodes.length > 0 && (
-        <div className="watch-layout">
-          <section>
+        <div className="watch-layout aligned-watch-layout">
+          <div className="playback-header">
             <h2>Episode {episode || '1'} — {episodes[index]?.title || `Episode ${episode || '1'}`}</h2>
             {player && (
-              <>
                 <label className="provider-server">
                   Server and language
                   <ThemedSelect aria-label="Server and language" value={server} onChange={e => setServer(Number(e.target.value))}>
@@ -274,9 +274,15 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
                     ))}
                   </ThemedSelect>
                 </label>
+            )}
+          </div>
+          <section>
+            {player && (
+              <>
                 {player.url ? (
                   <CinemaPlayer
                     key={player.url}
+                    historyItem={{ animeId: animeItem.id, title: animeItem.title, cover: animeItem.coverImage, episode: String(episode), source: "legacy" }}
                     url={player.url}
                     intro={player.intro}
                     title={`${source?.title || animeItem.title} · Episode ${episode}`}
@@ -298,14 +304,14 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
                 disabled={index <= 0}
                 onClick={() => selectEpisode(episodes[index - 1].number)}
               >
-                ← Previous
+                <BackChevron /> Previous
               </button>
               <button
                 className="button primary"
                 disabled={index < 0 || index >= episodes.length - 1}
                 onClick={() => selectEpisode(episodes[index + 1].number)}
               >
-                Next →
+                Next <BackChevron forward />
               </button>
             </div>
           </section>
@@ -334,6 +340,3 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
     </div>
   );
 }
-
-
-

@@ -1,3 +1,4 @@
+import BackChevron from '../components/BackChevron';
 import { Link, useParams } from "react-router-dom";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound } from "../components/CatalogUI";
@@ -16,7 +17,7 @@ export default function WatchPage() {
   return (
     <div className="page watch-page">
       <Link className="back-link" to={`/anime/${item.id}`}>
-        ← {item.title}
+        <BackChevron /> {item.title}
       </Link>
       <div className="watch-layout">
         <section>
@@ -60,7 +61,7 @@ export default function WatchPage() {
                 className="button secondary"
                 to={`/watch/${item.id}/${item.episodes[index - 1].id}`}
               >
-                ← Previous
+                <BackChevron /> Previous
               </Link>
             ) : (
               <span />
@@ -70,7 +71,7 @@ export default function WatchPage() {
                 className="button primary"
                 to={`/watch/${item.id}/${item.episodes[index + 1].id}`}
               >
-                Next preview →
+                Next preview <BackChevron forward />
               </Link>
             )}
           </div>

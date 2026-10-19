@@ -75,8 +75,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         let count = 0;
         let next = false;
         const detailId = pathname.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
-        if (pathname === '/local') {
-          // Device playback does not depend on the online catalog.
+        if (pathname === '/history') {
+          // Watch history does not depend on the online catalog.
           items = [];
         } else if (detailId) {
           const id = resolveId(detailId);
