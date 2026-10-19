@@ -12,7 +12,7 @@ export default function AnimeDetailPage() {
   return (
     <div className="page detail-page">
       <Link className="back-link" to="/browse">
-        ← Back to anime
+        <FontAwesomeIcon icon={byPrefixAndName.fas['chevron-left']} /> Back to anime
       </Link>
       <section className="detail-layout">
         <img className="detail-poster" src={item.coverImage} alt={item.title} />
