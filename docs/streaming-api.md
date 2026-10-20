@@ -1,83 +1,60 @@
-# Streaming API and player controls
+# Anime playback through Abyss
 
-Akamaru uses **Anikage's Koto source API** for its full-control player. This was
-already partly integrated; the episode page previously defaulted to the basic
-embedded source. New sessions now default to **Akamaru · Full controls**, while
-saved source preferences remain respected.
+Akamaru uses Abyss players returned by AnimeLok's public episode endpoint.
+Movies Nexus, Koto/Anikage, and Anikoto are not used for episode playback.
+Old source preferences are ignored. Retired Koto/Anikoto API routes return JSON
+404s, and the interface has no alternative-server selector or fallback.
 
-## Movies Nexus embedded option
+## Resolution flow
 
-Select **Movies Nexus · Provider player** to use the documented
-`https://www.moviesnexus.fun/anime/ANILIST_ID/EPISODE/PREFERENCE` iframe with
-`sub`, `dub`, or `multi`. The server's `/api/nexus/MAL_ID` route obtains public
-mapping and episode metadata from `https://api.ani.zip/mappings?mal_id=MAL_ID`.
-It verifies the returned MAL ID, requires a valid AniList ID, and filters special,
-invalid, and future-dated episode entries. No MAL ID is substituted for an
-AniList ID and no episode list is generated from a count.
+1. /api/nexus/MAL_ID supplies shared public ID and aired-episode metadata from
+   https://api.ani.zip/mappings?mal_id=MAL_ID. This endpoint retains its earlier
+   internal name but makes no Movies Nexus requests.
+2. /api/animelok/ANILIST_ID/EPISODE fetches the fixed upstream URL
+   https://animelok.cc/api/anilist/ANILIST_ID/EPISODE.
+3. The adapter verifies the returned AniList ID and episode number. It accepts
+   only language-labelled iframe links on https://player.abyssplayer.com with a
+   single video-ID path. Credentials, ports, queries, fragments, and foreign
+   hosts are rejected. No encrypted payloads are decoded or video URLs extracted.
+4. The browser embeds the selected language's original URL. English is preferred
+   if available, otherwise Japanese or the first returned language. A saved
+   language preference is used when available for the next episode.
 
-Only metadata uses Akamaru's backend. The iframe loads directly from Movies
-Nexus; video is not proxied through Vercel. No new credentials or Vercel rewrite
-are needed: deploy from the repository root with the existing build settings.
-The provider's `autoNext=0` setting keeps its episode aligned with Akamaru's
-Previous, Next, and episode-list navigation. The audio preference is retained.
-Reload remounts the iframe, and an Anikoto fallback remains available.
+The supplied Frieren example E-aqhQkoAa is labelled Tamil by AnimeLok. Episode 1
+has separate English and Japanese player IDs. Episode 2 returns different video
+IDs for those languages; these are resolved dynamically rather than hard-coded.
+Cyberpunk episode 1 returned no Abyss tracks during the check. Such episodes
+show an unavailable message with Retry; another host is not silently substituted.
 
-Mobile players remain edge-to-edge and expand on landscape rotation. Playback
-controls belong to Movies Nexus; no undocumented control commands or progress
-events are assumed, and this source does not create artificial watch-history
-entries. Akamaru's direct-player controls remain available under the Koto source.
+## Iframe behavior
 
-Live checks on October 21, 2026 loaded the Movies Nexus iframe, but Frieren
-episode 1 reported no active servers and Cyberpunk episode 1 remained on its
-loading screen during the check. For that reason, the integration is selectable
-and remembers the user's choice, but does not replace the default source.
+The player preserves the supplied origin referrer policy and sandbox permissions:
+allow-scripts allow-same-origin allow-presentation allow-forms. Autoplay,
+encrypted media, fullscreen, and picture-in-picture permissions are enabled.
 
-Integration checks passed with live Ani.zip metadata and a simulated provider
-frame: ID mapping, 28 Frieren episodes, audio changes and persistence, reload,
-episode routing, invalid-episode rejection, mobile width, landscape expansion,
-and zero Koto requests. Actual Movies Nexus video playback remains unverified.
-The production build and all 36 automated tests passed.
+Actual player controls belong to Abyss. Akamaru handles audio-language selection,
+episode navigation, reload, mobile width, and landscape expansion. It does not
+assume undocumented external control commands or playback-progress events, and
+does not fabricate watch history. Previously saved history remains readable.
 
-## Evaluation on October 21, 2026
+Successful player mappings are cached for 60 seconds and concurrent requests are
+deduplicated. Reload/Retry requests a fresh mapping; missing streams and failed
+requests are not cached as successes. The gateway never proxies video bytes.
 
-| Service | Findings | Decision |
-| --- | --- | --- |
-| [Anikage](https://anikage.cc/) / Koto | Live catalog, episode sources, 1080p HLS master, and WebVTT subtitles responded successfully. Actual playback and custom controls worked through Akamaru's local API. | Use the existing adapter as the default full-control option. |
-| [Aniweeb API](https://api.aniweeb.net/docs) | Episode and server listings worked, but the documented playback interface supplies iframe URLs. Its docs do not specify an external control bridge for subtitles, quality, or speed. | Does not meet this request for Akamaru's own controls. |
-| [AnimePahe API](https://myapi-psi-wheat.vercel.app/) | Documents a custom HLS interface. Its health endpoint responded, but title searches timed out during evaluation. | Do not add an unverified playback dependency. |
+## Deployment and verification
 
-These are local checks of current availability, not guarantees of service
-uptime, catalog coverage, or access from a hosting platform. Koto's interface is
-undocumented and may change. No upstream extractor or token decryption was added.
+No new API key or environment variable is required. Build and deploy from the
+repository root with the existing configuration. Vercel must be able to reach
+Ani.zip and AnimeLok; browsers load the Abyss iframe directly. Provider outages
+or access restrictions can still prevent playback after deployment.
 
-## Request flow
+Checks cover language mapping, exact episode matching, host restrictions,
+metadata cache/refresh behavior, absent streams, upstream errors, default English,
+the supplied Tamil embed, episode-2 language persistence, iframe permissions,
+phone width, and landscape expansion. Live provider availability must be checked
+separately from integration tests using simulated iframe contents.
 
-1. `/api/anikage/search?q=TITLE` finds titles. Only an exact MAL ID match is selected.
-2. `/api/anikage/SLUG/episodes` returns real episode numbers and names.
-3. `/api/anikage/SLUG/EPISODE?lang=sub` (or `dub`) requests a current source.
-4. The adapter returns a local `/api/anikage/media/m3u8/TOKEN` URL, local
-   WebVTT track URLs, and intro/outro timings where supplied.
-5. CinemaPlayer plays HLS through hls.js or native HLS. The existing gateway
-   handles the fixed media service; client input cannot choose an arbitrary host.
-
-Direct video exposes play/pause, seeking, mute, speed, captions, available HLS
-qualities, fullscreen, and next-episode controls. Quality selection cannot add
-resolutions missing from the source; the checked Frieren episode offered Auto
-and 1080p. Native HLS browsers may manage quality automatically.
-
-Fatal playback errors now show an episode retry and the Anikoto fallback. Retry
-loads a fresh source instead of reusing an expired stream URL. Subtitle selection
-uses the current preference when additional tracks arrive, including Off.
-
-## Verification
-
-- Production client build and client/server TypeScript checks passed.
-- All 32 automated tests passed, including local URL normalization, source
-  response mapping, playlist rewriting, and rejected media hosts/resource paths.
-- Live Chrome playback of Frieren episode 1 passed play, pause, ten-second
-  forward seek, 1.5x speed, 1080p selection, subtitles Off, and English subtitles.
-- The provider returned nine subtitle tracks and a duration of about 26 minutes.
-
-Changes are not deployed. After deployment, check search, source resolution,
-playlist/segment loading, subtitles, and actual playback again. Hosting bandwidth
-and request limits apply because media is served through the existing gateway.
+The production build and all 28 automated tests passed. The live English iframe
+loaded its controls and approximately 26 minutes of video metadata, but its
+overlay intercepted the automated play interaction. Continuous playback was not
+verified; test it manually and again after deployment.

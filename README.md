@@ -70,16 +70,6 @@ Run `npm run build` and `npm test` before deploying. Push the changes and redepl
 
 MIT
 
-## Animiru api
-
-The Akamaru cinema controls cover the provider frame and disable its pointer and tab input. Play/pause, seeking and mute use MegaPlay's existing postMessage bridge, with origin and source validation; fullscreen is handled by Akamaru. This prevents direct player-click ad handlers from receiving user clicks. The provider iframe still runs third-party scripts, so this is not a blanket ad blocker or a guarantee against provider-inserted advertising. Unsupported hosts display a server-selection message instead of an interactive third-party player. Caption and quality menus are not exposed by the supported bridge.
-
-Open an anime's detail page and choose **Watch episodes**. Select the matching title/season, then an episode and Sub/Dub server. The separate `/api/animiru` adapter loads public listings from `anikoto` and embeds the provider-returned player. It does not download or proxy video, generate media access tokens, or bypass player restrictions. Unknown player hosts are rejected; an external episode link remains available. Third-party availability and playback can change, and local verification does not guarantee access from Vercel.
-
-The request flow and HTML selectors were informed by [Yūzōnō's extension] distributed under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE). The web adapter is independently implemented; no Android extractor, decryption or token-generation code is included. No API key is required. Deploy the repository root so the Express API is included.
-
-The proxy allows only anime search, top anime, genres, and numeric anime details. It caches successful responses for five minutes, deduplicates concurrent requests, spaces upstream calls, and returns non-cacheable JSON errors on rate limits/timeouts. This requires deploying the root Vercel API function alongside the frontend. After deployment, check /api/jikan/top/anime?limit=1 returns JSON. A 502 means Vercel could not reach Tenrai; a 404 means the function/routing was not deployed. This change cannot resolve an outage at the upstream provider itself.
-
 ## Cloudflare Workers deployment
 
 Deploy from the repository root with build command `npm run build` and deploy
@@ -101,22 +91,24 @@ from Cloudflare or resolve an upstream HTTP 403.
 
 ## Player
 
-**Movies Nexus · Provider player** is available in the playback-source selector.
-It uses verified MAL-to-AniList mappings and aired episode metadata from Ani.zip,
-then loads Movies Nexus directly in the browser with Sub, Dub, or Multi-audio.
-Episode navigation stays in Akamaru; the provider's internal auto-next is disabled.
-This source does not use Koto or proxy video through Vercel. It uses the provider's
-own controls and does not expose playback progress to Akamaru history. No new API
-key or environment variable is required. Its stream availability is independent
-of the episode metadata; live checks found no Frieren streams and Cyberpunk did
-not finish loading, so it is selectable without changing the existing default.
+Anime episodes use Abyss iframe players resolved from AnimeLok's public episode
+response. The app maps MAL IDs to AniList IDs using Ani.zip, loads real aired
+episode metadata, then selects only returned player.abyssplayer.com links.
+Movies Nexus, Koto, and Anikoto are not used for episode playback.
 
-The episode page defaults to **Akamaru · Full controls**, powered by Anikage's Koto source API. An explicitly saved playback-source preference is retained. The server searches Anikage's catalog and the client selects only an exact MyAnimeList ID match automatically. If no exact match exists, the page offers the Anikoto fallback. Actual episode lists, Sub/Dub sources and skip timings come from the Koto service. No pasted watch link is required. **Anikoto · Basic controls** remains available in the source selector.
+Audio choices reflect the languages actually returned for each episode. English
+is preferred when available; the selected language is saved on this browser.
+Previous/Next navigation loads the correct episode's player ID. Reload refreshes
+the episode mapping. No video ID is generated from an anime ID or reused across
+episodes, and other provider hosts are not accepted as fallbacks.
 
-This is an integration with Anikage's undocumented Koto source service, not an independent extractor or a copy of its backend. Video is played by HTML video and hls.js inside Akamaru, with captions, available manifest qualities, speed (0.5–3x), ten-second seeking, intro skipping, fullscreen and next-episode autoplay. Quality choices depend on the stream; an episode with only 1080p offers Auto and 1080p. Autoplay can require a user gesture under browser policy.
+The iframe uses origin referrers and the sandbox from the supplied example:
+allow-scripts allow-same-origin allow-presentation allow-forms. Provider controls
+remain inside the iframe. Mobile full-width and landscape expansion remain
+supported. The embedded player does not report progress to Akamaru history;
+previously saved history remains readable.
 
-The existing same-origin media gateway forwards requests to the fixed `og.bakayaro.live` service with its provider request headers. Master/variant playlists, segment and key URLs, and subtitles stay on the gateway; remote redirects and foreign playlist resource hosts are rejected. Metadata is briefly cached and deduplicated. Temporary media URLs are not saved to disk. The upstream service still controls availability and may change its API or request requirements.
-
-The API adapter returns local HLS and WebVTT URLs directly. CinemaPlayer does not need provider-specific URL rewriting. Playback failures expose retry and fallback actions; retry requests a fresh source. Subtitle selection remains stable as additional tracks load. See [streaming integration notes](docs/streaming-api.md) for the API comparison and live verification.
-
-The earlier direct-browser experiment was rejected by the media service for Akamaru's domain. The gateway changes that request path; verify the deployed API and playback after deployment rather than assuming a local test proves Vercel access. Media segments consume hosting bandwidth and function requests; production response-size, execution-time and usage limits still apply. No deployment is performed by a local build.
+No new API key is required. Vercel handles metadata/iframe-link resolution;
+video loads directly from Abyss. Local checks do not establish access from
+Vercel, so test episode resolution and actual playback after deployment.
+See [streaming integration notes](docs/streaming-api.md).

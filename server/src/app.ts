@@ -2,10 +2,9 @@
 import cors from "cors";
 import animeRoutes from "./routes/anime";
 import jikanRoutes from './routes/jikan';
-import anikotoRoutes from './routes/anikoto';
-import anikageRoutes from './routes/anikage';
 import malRoutes from './routes/mal';
 import nexusRoutes from './routes/nexus';
+import animelokRoutes from './routes/animelok';
 
 const app = express();
 
@@ -21,10 +20,9 @@ app.use(express.json());
 // Routes
 app.use("/api/anime", animeRoutes);
 app.use('/api/jikan', jikanRoutes);
-app.use('/api/anikoto', anikotoRoutes);
-app.use('/api/anikage', anikageRoutes);
 app.use('/api/mal', malRoutes);
 app.use('/api/nexus', nexusRoutes);
+app.use('/api/animelok', animelokRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

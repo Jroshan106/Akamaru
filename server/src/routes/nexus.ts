@@ -7,7 +7,7 @@ const record = (value: unknown): Record<string, unknown> => value && typeof valu
 export function normalizeNexusTitle(value: unknown, malId: number, now = Date.now()): NexusTitle {
   const data = record(value), mapping = record(data.mappings);
   if (mapping.mal_id !== malId || !Number.isSafeInteger(mapping.anilist_id) || Number(mapping.anilist_id) < 1) {
-    throw new Error('No verified AniList match is available for this anime. Try another playback source.');
+    throw new Error('No verified AniList match is available for this anime. Please retry later.');
   }
   const episodes = Object.entries(record(data.episodes)).filter(([number, episode]) => {
     if (!/^[1-9]\d{0,4}$/.test(number)) return false;
@@ -22,8 +22,7 @@ export function normalizeNexusTitle(value: unknown, malId: number, now = Date.no
   return { malId, anilistId: Number(mapping.anilist_id), episodes };
 }
 
-// Only public ID/episode metadata passes through Vercel. Playback loads directly
-// in the documented Movies Nexus iframe, without a Koto request or media proxy.
+// Shared public ID/episode metadata only. Playback providers are resolved separately.
 export function createNexusRouter(fetcher: typeof fetch = fetch) {
   const router = Router();
   const cache = new Map<number, { until: number; data: NexusTitle }>();
@@ -40,7 +39,7 @@ export function createNexusRouter(fetcher: typeof fetch = fetch) {
         if (pending.size >= 8) { res.status(503).json({ error: 'Anime mapping is busy. Please retry shortly.' }); return; }
         request = (async () => {
           const response = await fetcher(`https://api.ani.zip/mappings?mal_id=${id}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000), redirect: 'error' });
-          if (!response.ok) throw new Error('Anime ID mapping is temporarily unavailable. Retry or choose another playback source.');
+          if (!response.ok) throw new Error('Anime ID mapping is temporarily unavailable. Please retry shortly.');
           const body = await response.text();
           if (body.length > 5_000_000) throw new Error('Unexpected anime mapping response.');
           const data = normalizeNexusTitle(JSON.parse(body), id);
