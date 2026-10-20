@@ -1,3 +1,4 @@
+import { SeasonSelect } from './AnimeRelations';
 import BackChevron from './BackChevron';
 import ThemedSelect from './ThemedSelect';
 import { useEffect, useState } from 'react';
@@ -18,9 +19,6 @@ async function read<T>(path: string, signal: AbortSignal): Promise<T> {
 
 export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { anime: Anime; initialEpisode?: string; onFallback: () => void }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState(anime.title);
-  const [search, setSearch] = useState(anime.title);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [source, setSource] = useState<Match | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [language, setLanguage] = useState('sub');
@@ -28,7 +26,6 @@ export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { an
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [retry, setRetry] = useState(0);
-  const [changeSource, setChangeSource] = useState(false);
   const [autoStart, setAutoStart] = useState(false);
   const episode = initialEpisode || episodes[0]?.number || '';
   const index = episodes.findIndex(e => e.number === episode);
@@ -39,12 +36,12 @@ export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { an
     void (async () => {
       try {
         if (!source) {
-          const data = await read<{ items: Match[] }>(`/search?q=${encodeURIComponent(search)}`, controller.signal);
+          const data = await read<{ items: Match[] }>(`/search?q=${encodeURIComponent(anime.title)}`, controller.signal);
           if (controller.signal.aborted) return;
-          setMatches(data.items);
           // Only an exact database ID match is safe to select automatically.
           const exact = data.items.find(m => String(m.malId) === anime.id);
           if (exact) setSource(exact);
+          else setError("No matching catalog ID is available on Koto. Try Anikoto.");
         } else {
           const data = await read<{ episodes: Episode[] }>(`/${source.slug}/episodes`, controller.signal);
           if (controller.signal.aborted) return;
@@ -54,7 +51,7 @@ export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { an
       finally { if (!controller.signal.aborted) setBusy(false); }
     })();
     return () => controller.abort();
-  }, [source, search, anime.id, retry]);
+  }, [source, anime.id, retry]);
 
   useEffect(() => {
     if (!source || !episode || index < 0) return;
@@ -76,20 +73,12 @@ export default function KotoEpisodes({ anime, initialEpisode, onFallback }: { an
     <Link className="back-link" to={`/anime/${anime.id}`}><BackChevron /> {anime.title}</Link>
     <span className="eyebrow">KOTO · AKAMARU PLAYER</span>
     <h1>{source?.title || anime.title}</h1>
-    <button className="text-link" onClick={() => setChangeSource(v => !v)}>Change title / season</button>
-    {(!source || changeSource) && <>
-      <form className="provider-search" onSubmit={e => { e.preventDefault(); setSource(null); setEpisodes([]); setStream(null); setSearch(query.trim()); setRetry(n => n + 1); }}>
-        <input aria-label="Search Koto titles" value={query} onChange={e => setQuery(e.target.value)} maxLength={180} required />
-        <button className="button primary">Search</button>
-      </form>
-      {!busy && !error && !matches.length && <p>No matching titles. Try another title spelling.</p>}
-      {!source && matches.length > 0 && <p>Select the correct title and season. An exact catalog ID match was not found.</p>}
-      <div className="episode-list">{matches.map(m => <button className="episode-row" key={m.slug} onClick={() => { setEpisodes([]); setStream(null); setSource(m); setChangeSource(false); navigate(`/anime/${anime.id}/episodes`, { replace: true }); }}><strong>{m.title}</strong><span>{m.year} · Select →</span></button>)}</div>
-    </>}
+    {!episodes.length && <SeasonSelect id={anime.id} title={anime.title}/>}
     {busy && <LoadingIndicator>Loading {source ? `episode ${episode || 'list'}` : 'title'}…</LoadingIndicator>}
     {error && <div role="alert"><p>{error}</p><p className="muted">You can try the separate Anikoto player for this title.</p><div className="episode-controls"><button className="button primary" onClick={onFallback}>Try Anikoto player</button><button className="button secondary" onClick={() => setRetry(n => n + 1)}>Retry Koto</button></div></div>}
     {source && episodes.length > 0 && <div className="watch-layout aligned-watch-layout">
       <div className="playback-header">
+        <SeasonSelect id={anime.id} title={anime.title}/>
         <h2>Episode {episode} — {episodes[index]?.title || 'Unavailable'}</h2>
         {index < 0 && <p role="alert">That episode is unavailable. Choose an episode from the list.</p>}
         <label className="provider-server">Audio language<ThemedSelect aria-label="Audio language" value={language} onChange={e => { setStream(null); setLanguage(e.target.value); }}><option value="sub">Japanese · Sub</option><option value="dub">English · Dub</option></ThemedSelect></label>

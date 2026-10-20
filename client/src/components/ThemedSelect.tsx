@@ -88,6 +88,6 @@ export default function ThemedSelect({ value, onChange, children, disabled, 'ari
     </button>
     {open && createPortal(<div ref={menu} id={id} role="listbox" aria-label={label} className={`themed-select-menu ${position.above ? 'opens-above' : ''}`} style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }} onPointerDown={e => e.preventDefault()}>
       {options.map((option, index) => <div key={option.value} id={`${id}-${index}`} data-index={index} role="option" aria-selected={index === selected} aria-disabled={option.disabled || undefined} className={`themed-select-option ${index === active ? 'is-active' : ''}`} onClick={() => choose(index)} onPointerMove={() => !option.disabled && setActive(index)}><span>{option.label}</span>{index === selected && <Check size={16} aria-hidden="true"/>}</div>)}
-    </div>, document.fullscreenElement || document.body)}
+    </div>, trigger.current?.closest('dialog') || document.fullscreenElement || document.body)}
   </>;
 }

@@ -3,6 +3,8 @@ import { Play, Star } from "lucide-react";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound, SaveButton } from "../components/CatalogUI";
 import { resolveId } from "../lib/jikan";
+import AnimeRelations from '../components/AnimeRelations';
+import MalTracker from '../components/MalTracker';
 export default function AnimeDetailPage() {
   const { id } = useParams();
   const { anime, loading, error } = useCatalog();
@@ -38,57 +40,11 @@ export default function AnimeDetailPage() {
           </div>
           <div className="hero-actions">
             <Link className="button primary" to={`/anime/${item.id}/episodes`}><Play size={18} /> Watch episodes</Link>
-            {item.episodes[0] && (
-              <Link
-                className="button secondary"
-                to={`/watch/${item.id}/${item.episodes[0].id}`}
-              >
-                <Play size={18} /> Watch trailer
-              </Link>
-            )}
-            <SaveButton id={item.id} />
+            <SaveButton id={item.id} /><MalTracker id={item.id} title={item.title} />
           </div>
         </div>
       </section>
-      <section className="catalog-section">
-        <h2>Trailers & information</h2>
-        <p className="muted">
-          {item.episodeCount
-            ? `${item.episodeCount} episodes listed.`
-            : "Episode count not announced."}{" "}
-          Tenrai provides anime information and trailers, not full-episode
-          streams.
-        </p>
-        <div className="episode-list">
-          {item.episodes.map((e) => (
-            <Link
-              to={`/watch/${item.id}/${e.id}`}
-              className="episode-row"
-              key={e.id}
-            >
-              <span className="episode-number">
-                <Play size={20} />
-              </span>
-              <div>
-                <strong>{e.title}</strong>
-                <span>YouTube trailer</span>
-              </div>
-              <Play size={20} />
-            </Link>
-          ))}
-        </div>
-        {!item.episodes.length && (
-          <p className="muted">No trailer is available for this title yet.</p>
-        )}
-        <a
-          className="text-link"
-          href={`https://myanimelist.net/anime/${item.id}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View on MyAnimeList ↗
-        </a>
-      </section>
+      <AnimeRelations id={item.id}/>
     </div>
   );
 }

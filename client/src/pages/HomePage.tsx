@@ -1,18 +1,21 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, Star, Sparkles } from "lucide-react";
+import { ArrowRight, Play, Star, Snowflake, Flower2, Sun, Leaf } from "lucide-react";
 import { useEffect, useState } from "react";
 import { RecentWatch } from './HistoryPage';
 import SeasonalAnime from '../components/SeasonalAnime';
 import { useCatalog } from "../lib/catalog";
 import { AnimeCard, CatalogState, SaveButton } from "../components/CatalogUI";
+import { useCurrentSeason } from '../lib/seasons';
 export default function HomePage() {
   const { anime, loading, error } = useCatalog();
+  const season = useCurrentSeason();
+  const SeasonIcon = {Winter:Snowflake, Spring:Flower2, Summer:Sun, Fall:Leaf}[season.name];
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(document.hidden);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const count = Math.min(6, anime.length);
+  const count = Math.min(6, season.items.length);
   const slide = count ? index % count : 0;
   const running = !hovered && !focused && !hidden && !reduced;
   useEffect(() => {
@@ -28,13 +31,15 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [running, loading, error, count, index]);
   if (loading || error) return <><CatalogState /><div className="page"><SeasonalAnime/></div></>;
-  const featured = anime[slide];
+  if (season.loading || season.error) return <><div className="main-loader" role="status"><h2>{season.name} spotlight</h2><p>{season.error || "Finding this season's top anime..."}</p>{season.error && <button className="button primary" onClick={season.retry}>Try again</button>}</div><div className="page"><RecentWatch/><SeasonalAnime/></div></>;
+  const featured = season.items[slide];
   if (!featured)
     return <div className="empty">The catalog is coming soon.</div>;
   return (
     <>
 
-      <section className="hero animated-hero" data-running={running} aria-label="Featured anime slideshow" aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}>
+      <section className="hero animated-hero" data-running={running} data-season={season.name.toLowerCase()} aria-label="Featured anime slideshow" aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}>
+        <div className="season-particles" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i}/>)}</div>
         <div className="hero-aurora" aria-hidden="true"><i/><i/><i/></div>
         <img
           key={`art-${featured.id}`}
@@ -48,7 +53,7 @@ export default function HomePage() {
         <div className="hero-shade" />
         <div className="hero-content" key={`content-${featured.id}`}>
           <span className="eyebrow">
-            <Sparkles size={14} /> THE SPOTLIGHT
+            <SeasonIcon size={16} /> {season.name.toUpperCase()} {season.year} SPOTLIGHT
           </span>
           <h1>{featured.title}</h1>
           <div className="hero-meta">
@@ -88,7 +93,7 @@ export default function HomePage() {
             <b>0{slide + 1}</b> / 0{count}
           </span>
           <div className="hero-dots">
-            {anime.slice(0, 6).map((a, i) => (
+            {season.items.slice(0, 6).map((a, i) => (
               <button
                 key={a.id}
                 aria-label={`Feature ${a.title}`}

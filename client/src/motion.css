@@ -196,3 +196,52 @@ main > .catalog-loading { width:90%; }
  .history-card strong { font-size:12px; }
  .back-link { font-size:12px; min-height:44px; }
 }
+/* Seasonal spotlight palettes leave the Akamaru action buttons crimson. */
+.hero[data-season=winter] { --season-color:#86cbff; --season-glow:#4c92d255; --season-dark:#101925; }
+.hero[data-season=spring] { --season-color:#ffb8cf; --season-glow:#e685aa55; --season-dark:#21131d; }
+.hero[data-season=summer] { --season-color:#ffd675; --season-glow:#edb23f55; --season-dark:#201b12; }
+.hero[data-season=fall] { --season-color:#ffb077; --season-glow:#db743c55; --season-dark:#231610; }
+.hero[data-season] { background:var(--season-dark); }
+.hero[data-season] .hero-shade { background:linear-gradient(90deg,var(--season-dark) 0%,transparent 80%); }
+.hero[data-season] .eyebrow { color:var(--season-color); }
+.hero[data-season] .hero-aurora i { background:radial-gradient(circle,var(--season-glow),transparent 65%); }
+.hero[data-season] .hero-timer span { background:linear-gradient(90deg,#b30f3c,var(--season-color)); }
+.season-particles { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.season-particles i { position:absolute; left:70%; top:-10%; width:8px; height:8px; border-radius:50%; background:var(--season-color); opacity:0; animation:season-drift 11s linear infinite; }
+.season-particles i:nth-child(2) { left:85%; animation-delay:-2s; }
+.season-particles i:nth-child(3) { left:58%; animation-delay:-4s; }
+.season-particles i:nth-child(4) { left:92%; animation-delay:-6s; }
+.season-particles i:nth-child(5) { left:35%; animation-delay:-8s; }
+.season-particles i:nth-child(6) { left:12%; animation-delay:-3s; }
+.season-particles i:nth-child(7) { left:45%; animation-delay:-7s; }
+.season-particles i:nth-child(8) { left:76%; animation-delay:-9s; }
+.hero[data-season=spring] .season-particles i { width:12px; height:7px; border-radius:80% 0 80% 0; }
+.hero[data-season=fall] .season-particles i { width:13px; height:9px; border-radius:0 80% 0 80%; }
+.hero[data-season=summer] .season-particles i { box-shadow:0 0 15px var(--season-color); animation-direction:reverse; }
+.hero[data-running=false] .season-particles i { animation-play-state:paused; }
+@keyframes season-drift { 0% { opacity:0; transform:translate(0,0) rotate(0); } 20%,80% { opacity:.35; } 100% { opacity:0; transform:translate(-60px,700px) rotate(300deg); } }
+.library-card { display:flex; flex-direction:column; min-width:0; }
+.library-card .anime-card { flex:1; }
+.library-card .card-title { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:2.9em; }
+.library-card .library-status { margin-top:14px; }
+.season-selector { width:min(100%,420px); margin:14px 0; }
+.season-selector label { display:grid; gap:8px; font-size:12px; }
+.season-selector small { display:block; color:#a99caa; margin-top:6px; }
+.relations-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:22px; }
+.relation-link { padding:20px; border:1px solid #b30f3c40; background:#211820; border-radius:14px; display:grid; gap:12px; color:#f8eef4; transition:transform .2s,border-color .2s; }
+.relation-link:hover { transform:translateY(-3px); border-color:#ec4e78; }
+.mal-track-button { color:#a6bfff; border:1px solid #526aa9; background:#263a642f; font-size:10px; font-weight:900; }
+.mal-dialog { color:#f8eef4; background:#1b151e; border:1px solid #634053; border-radius:20px; width:min(480px,calc(100vw - 32px)); max-height:85dvh; padding:24px; margin:auto; }
+.mal-dialog[open] { animation:card-enter .2s ease-out; }
+.mal-dialog::backdrop { background:#09070bd9; backdrop-filter:blur(5px); }
+.mal-dialog-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.mal-dialog h2 { font-size:22px; margin:0; }
+.mal-dialog p { font-size:13px; line-height:1.6; color:#c5b8c8; margin:16px 0; }
+.mal-dialog form { display:grid; gap:16px; }
+.mal-dialog label { display:grid; gap:8px; font-size:12px; }
+.mal-dialog input { color:white; background:#2b222c; padding:12px; border:1px solid #58404f; border-radius:10px; }
+.mal-dialog > .text-link { display:inline-flex; margin-top:20px; }
+.cinema-side { touch-action:manipulation; }
+.cinema-side:active span { opacity:0; }
+.cinema-side span.seek-flash { opacity:1; animation:icon-pop .35s ease-out; }
+@media(max-width:720px) { .hero[data-season] .hero-shade { background:linear-gradient(0deg,var(--season-dark) 45%,transparent 90%); } }

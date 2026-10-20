@@ -5,6 +5,7 @@ import { load } from 'cheerio';
 // Only public episode listings and provider-returned embeds are used.
 const origin = 'https://anikototv.to';
 const slugPattern = /^[a-z0-9][a-z0-9-]{0,180}$/;
+export const normalizeTitle = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 export function allowedPlayer(value: string): boolean {
   try {
     const url = new URL(value);
@@ -14,7 +15,7 @@ export function allowedPlayer(value: string): boolean {
 }
 export function parseSearch(html: string) {
   const $ = load(html);
-  const items = new Map<string, { slug: string; title: string }>();
+  const items = new Map<string, { slug: string; title: string; alternateTitle: string }>();
   $('div.ani.items > div.item a.name').each((_, el) => {
     const a = $(el);
     const href = a.attr('href') || '';
@@ -22,7 +23,7 @@ export function parseSearch(html: string) {
       const url = new URL(href, origin);
       const slug = url.pathname.match(/^\/watch\/([a-z0-9-]+)(?:\/ep-[\d.]+)?\/?$/)?.[1];
       if (url.origin === origin && slug && slugPattern.test(slug)) {
-        items.set(slug, { slug, title: a.text().trim() });
+        items.set(slug, { slug, title: a.text().trim(), alternateTitle: a.attr('data-jp') || '' });
       }
     } catch { /* Ignore malformed upstream links. */ }
   });
@@ -76,6 +77,22 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
     if (typeof html !== 'string') throw new Error('Unexpected episode response.');
     return parseEpisodes(html);
   }
+  router.get('/resolve/:malId', async (req, res) => {
+    if (!/^[1-9]\d{0,8}$/.test(req.params.malId)) { res.status(400).json({error:'Invalid anime ID.'}); return; }
+    try {
+      const response = await fetcher(`https://api.tenrai.org/v1/anime/${req.params.malId}`, { signal: AbortSignal.timeout(8000), redirect:'error' });
+      if (!response.ok) throw new Error('The catalog could not resolve this anime ID.');
+      const { data } = await response.json() as {data?: {title?:string;title_english?:string;title_japanese?:string}};
+      const aliases: string[] = [...new Set<string>([data?.title, data?.title_english, data?.title_japanese].filter((v): v is string => typeof v === 'string' && v.length > 0))];
+      const names = new Set(aliases.map(normalizeTitle));
+      for (const title of aliases.slice(0, 3)) {
+        const matches = parseSearch(await request(`/filter?keyword=${encodeURIComponent(title)}`)).filter(m => names.has(normalizeTitle(m.title)) || (m.alternateTitle && names.has(normalizeTitle(m.alternateTitle))));
+        if (matches.length === 1) { res.json({item: matches[0], malId: Number(req.params.malId), matchedBy:'catalog-title-alias'}); return; }
+        if (matches.length > 1) break;
+      }
+      res.status(404).json({error:'This anime has no unambiguous match on Anikoto. Try the other playback source.'});
+    } catch (e) { res.status(502).json({error:e instanceof Error ? e.message : 'Unable to resolve this anime.'}); }
+  });
   router.get('/search', async (req, res) => {
     const q = req.query.q;
     if (typeof q !== 'string' || !q.trim() || q.length > 180) { res.status(400).json({ error: 'Enter an anime title.' }); return; }

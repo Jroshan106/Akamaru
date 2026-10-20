@@ -4,6 +4,7 @@ import animeRoutes from "./routes/anime";
 import jikanRoutes from './routes/jikan';
 import anikotoRoutes from './routes/anikoto';
 import anikageRoutes from './routes/anikage';
+import malRoutes from './routes/mal';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api/anime", animeRoutes);
 app.use('/api/jikan', jikanRoutes);
 app.use('/api/anikoto', anikotoRoutes);
 app.use('/api/anikage', anikageRoutes);
+app.use('/api/mal', malRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

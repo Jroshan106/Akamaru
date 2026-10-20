@@ -11,7 +11,7 @@ test('Anikoto accepts only HTTPS players on known hosts', () => {
 });
 test('Provider search ignores external links and deduplicates episodes', () => {
   const wrap = inner => `<div class="ani items"><div class="item">${inner}</div></div>`;
-  assert.deepEqual(parseSearch(wrap('<a class="name" href="/watch/example-123/ep-1">A &amp; B</a><a class="name" href="/watch/example-123/ep-2">A &amp; B</a><a class="name" href="https://evil.test/watch/bad">Bad</a>')), [{ slug: 'example-123', title: 'A & B' }]);
+  assert.deepEqual(parseSearch(wrap('<a class="name" href="/watch/example-123/ep-1">A &amp; B</a><a class="name" href="/watch/example-123/ep-2">A &amp; B</a><a class="name" href="https://evil.test/watch/bad">Bad</a>')), [{ slug: 'example-123', title: 'A & B', alternateTitle: '' }]);
 });
 test('Episode parser keeps numbers, titles and language availability', () => {
   const data = parseEpisodes('<div class="episodes"><ul><li><a data-num="2" data-ids="b" data-dub="1"><span class="d-title">Second</span></a></li><li><a data-num="1" data-ids="a" data-sub="1"><span class="d-title">First &amp; Last</span></a></li></ul></div>');
@@ -65,4 +65,13 @@ test('Player response preserves valid intro timing and rejects malformed interva
       assert.deepEqual((await response.json()).intro, expected);
     } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
   }
+});
+
+test('ID resolver uses catalog aliases and refuses ambiguous title matches', async () => {
+ for (const ambiguous of [false,true]) {
+  const mock=async url=>url.startsWith('https://api.tenrai.org/') ? Response.json({data:{title:'Original Title',title_english:'English Title'}}) : new Response(`<div class="ani items"><div class="item"><a class="name" data-jp="Original Title" href="/watch/correct-id">English Title</a>${ambiguous ? '<a class="name" href="/watch/other-id">English Title</a>' : ''}</div></div>`);
+  const app=express();app.use('/api',createAnikotoRouter(mock));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+  try { const response=await fetch(`http://127.0.0.1:${server.address().port}/api/resolve/9253`); assert.equal(response.status,ambiguous ? 404 : 200);if(!ambiguous)assert.equal((await response.json()).item.slug,'correct-id'); }
+  finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+ }
 });

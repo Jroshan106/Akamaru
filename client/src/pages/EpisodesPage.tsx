@@ -1,3 +1,4 @@
+import { SeasonSelect } from '../components/AnimeRelations';
 import BackChevron from '../components/BackChevron';
 import ThemedSelect from '../components/ThemedSelect';
 import { useEffect, useState } from 'react';
@@ -56,10 +57,6 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(animeItem.title);
-  const [matches, setMatches] = useState<Match[]>([]);
-
   // 1. Resolve source anime and load episodes automatically
   useEffect(() => {
     const controller = new AbortController();
@@ -71,36 +68,9 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
       try {
         let activeSource = source;
         if (!activeSource) {
-          const q = searchQuery.trim() || animeItem.title;
-          const searchRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(q)}`, controller.signal);
-          let items = searchRes.items || [];
+          const resolved = await get<{ item: Match }>(`/resolve/${animeItem.id}`, controller.signal);
           if (cancelled) return;
-          setMatches(items);
-
-          if (!items.length && animeItem.japaneseTitle) {
-            const jpRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(animeItem.japaneseTitle)}`, controller.signal);
-            if (jpRes.items?.length) items = jpRes.items;
-          }
-
-          if (!items.length) {
-            const simplified = q.replace(/[:\-–—].*$/, '').trim();
-            if (simplified && simplified.toLowerCase() !== q.toLowerCase()) {
-              const simpRes = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(simplified)}`, controller.signal);
-              if (simpRes.items?.length) items = simpRes.items;
-            }
-          }
-
-          if (!items.length) {
-            throw new Error(`No matching video streams were found for "${animeItem.title}".`);
-          }
-
-          const exact = items.find(m => m.title.toLowerCase() === animeItem.title.toLowerCase());
-          setMatches(items);
-          if (!exact) {
-            setShowSearch(true);
-            throw new Error('Choose the matching title and season below to load episodes.');
-          }
-          activeSource = exact;
+          activeSource = resolved.item;
           setSource(activeSource);
         }
 
@@ -185,20 +155,6 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
     navigate(`/anime/${animeItem.id}/episodes/${number}`);
   }
 
-  async function handleManualSearch() {
-    if (!searchQuery.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      const res = await get<{ items: Match[] }>(`/search?q=${encodeURIComponent(searchQuery.trim())}`, AbortSignal.timeout(8000));
-      setMatches(res.items || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="page watch-page provider-page">
       <Link className="back-link" to={`/anime/${animeItem.id}`}><BackChevron /> {animeItem.title}</Link>
@@ -208,50 +164,8 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
           <span className="eyebrow">EPISODES · ANIKOTO</span>
           <h1 style={{ margin: 0 }}>{source?.title || animeItem.title}</h1>
         </div>
-        <button
-          className="text-link"
-          onClick={() => setShowSearch(s => !s)}
-          style={{ fontSize: '13px', cursor: 'pointer' }}
-        >
-          {showSearch ? 'Hide search' : 'Change season / search'}
-        </button>
       </div>
-
-      {showSearch && (
-        <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '16px', borderRadius: '12px', margin: '12px 0 20px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <form className="provider-search" onSubmit={e => { e.preventDefault(); void handleManualSearch(); }} style={{ marginBottom: matches.length ? '12px' : 0 }}>
-            <input
-              aria-label="Search Anikoto"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              maxLength={180}
-              placeholder="Search title or season…"
-              required
-            />
-            <button className="button primary" type="submit">Search</button>
-          </form>
-          {matches.length > 0 && (
-            <div className="episode-list" style={{ maxHeight: '220px', overflowY: 'auto' }}>
-              {matches.map(m => (
-                <button
-                  key={m.slug}
-                  className={`episode-row ${source?.slug === m.slug ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSource(m);
-                    setEpisodes([]);
-                    setPlayer(null);
-                    setShowSearch(false);
-                    setRetry(n => n + 1);
-                  }}
-                >
-                  <strong>{m.title}</strong>
-                  <span>{source?.slug === m.slug ? 'Current' : 'Select season →'}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {!episodes.length && <SeasonSelect id={animeItem.id} title={animeItem.title}/>}
 
       {busy && !player && <LoadingIndicator>Loading episode {episode || '1'}…</LoadingIndicator>}
       {error && (
@@ -264,6 +178,7 @@ function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initi
       {episodes.length > 0 && (
         <div className="watch-layout aligned-watch-layout">
           <div className="playback-header">
+            <SeasonSelect id={animeItem.id} title={animeItem.title}/>
             <h2>Episode {episode || '1'} — {episodes[index]?.title || `Episode ${episode || '1'}`}</h2>
             {player && (
                 <label className="provider-server">

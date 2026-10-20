@@ -107,3 +107,10 @@ test('upstream timeout returns a useful 502 instead of hanging', async () => {
     assert.match((await response.json()).error, /server cannot reach the anime provider/);
   }, 20);
 });
+
+test('proxy permits only numeric anime relation endpoints', async () => {
+ await withProxy(async url => { assert.equal(new URL(url).pathname,'/v1/anime/9253/relations'); return Response.json({data:[]}); }, async base => {
+  assert.equal((await fetch(`${base}/anime/9253/relations`)).status,200);
+  assert.equal((await fetch(`${base}/anime/nope/relations`)).status,404);
+ });
+});

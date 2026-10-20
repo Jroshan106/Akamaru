@@ -249,6 +249,20 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
     reveal();
   }
 
+  const lastTap = useRef<{side: number; at: number} | null>(null);
+  const [seekFeedback, setSeekFeedback] = useState<{side:number; at:number} | null>(null);
+  useEffect(() => {
+    if (!seekFeedback) return;
+    const timer = window.setTimeout(() => setSeekFeedback(null), 650);
+    return () => window.clearTimeout(timer);
+  }, [seekFeedback]);
+  function tapSide(side: number) {
+    const now = Date.now();
+    if (lastTap.current?.side === side && now - lastTap.current.at < 350) {
+      seek(time + side * 10); setSeekFeedback({side, at:now}); lastTap.current = null;
+    } else { lastTap.current = {side, at:now}; reveal(); }
+  }
+
   function mute() {
     if (!ready) return;
     command('MUTE');
@@ -320,8 +334,8 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
     </video> : <iframe ref={frame} src={url} title="Video source" tabIndex={-1} aria-hidden="true" className="cinema-source"
       allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />}
     <button className="cinema-click-surface" aria-label={playing ? 'Pause video' : 'Play video'} onClick={toggle} disabled={!ready} tabIndex={-1} />
-    <button className="cinema-side cinema-side-left" aria-label="Rewind 10 seconds by clicking left" disabled={!ready || !duration} tabIndex={-1} onClick={() => seek(time - 10)}><span>↶ 10s</span></button>
-    <button className="cinema-side cinema-side-right" aria-label="Skip 10 seconds by clicking right" disabled={!ready || !duration} tabIndex={-1} onClick={() => seek(time + 10)}><span>10s ↷</span></button>
+    <button className="cinema-side cinema-side-left" aria-label="Double tap left to rewind 10 seconds" disabled={!ready || !duration} tabIndex={-1} onClick={() => tapSide(-1)}><span className={seekFeedback?.side === -1 ? "seek-flash" : ""}>↶ 10s</span></button>
+    <button className="cinema-side cinema-side-right" aria-label="Double tap right to skip 10 seconds" disabled={!ready || !duration} tabIndex={-1} onClick={() => tapSide(1)}><span className={seekFeedback?.side === 1 ? "seek-flash" : ""}>10s ↷</span></button>
     <div className="cinema-heading"><span>AKAMARU</span><strong>{title}</strong></div>
     {!ready && <div className="cinema-loading" role="status"><span className="cinema-spinner" /><p>{slow ? 'The video is taking longer than usual. Try another server below.' : 'Preparing your episode…'}</p></div>}
     {ready && !playing && <button className="cinema-center" onClick={toggle} aria-label="Play"><Play fill="currentColor" size={34} /></button>}
