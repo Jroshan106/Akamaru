@@ -23,6 +23,9 @@
 .provider-server { width:fit-content; max-width:100%; min-width:180px; font-size:12px; color:#bcaab4; }
 .provider-server button.themed-select { width:auto; min-width:180px; max-width:300px; min-height:38px; padding:8px 12px; font-size:12px; border-radius:10px; }
 .provider-page { max-width:1800px; }
+.manual-episode { display:grid; gap:12px; margin-top:16px; }
+.manual-episode label { display:grid; gap:8px; font-size:12px; }
+.manual-episode input { width:100%; min-height:44px; padding:10px 12px; border:1px solid #ffffff25; border-radius:10px; background:#21191d; color:white; font:inherit; }
 .provider-page .watch-layout { grid-template-columns:minmax(0,1fr) minmax(300px,28%); gap:24px; }
 .provider-page .watch-layout > aside { min-width:0; border:1px solid #ffffff0c; border-radius:16px; padding:18px; background:#17131980; align-self:start; }
 .provider-page .provider-episodes { max-height:clamp(360px,68vh,780px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; padding:2px; }

@@ -91,24 +91,29 @@ from Cloudflare or resolve an upstream HTTP 403.
 
 ## Player
 
-Anime episodes use Abyss iframe players resolved from AnimeLok's public episode
-response. The app maps MAL IDs to AniList IDs using Ani.zip, loads real aired
-episode metadata, then selects only returned player.abyssplayer.com links.
-Movies Nexus, Koto, and Anikoto are not used for episode playback.
+Ravok is the default anime player, replacing the separate Abyss audio-language
+embeds. Akamaru maps MAL IDs to AniList IDs through Ani.zip, then resolves each
+episode's returned https://ravok.buzz/video/VIDEO_ID link through AnimeLok.
+Audio and subtitles are selected inside Ravok, rather than through an external
+Japanese/English selector. Track availability depends on the provider's episode.
+The supplied Frieren episode 1 URL is used only when returned for that episode;
+it is not reused for other episodes.
 
-Audio choices reflect the languages actually returned for each episode. English
-is preferred when available; the selected language is saved on this browser.
-Previous/Next navigation loads the correct episode's player ID. Reload refreshes
-the episode mapping. No video ID is generated from an anime ID or reused across
-episodes, and other provider hosts are not accepted as fallbacks.
+When Ravok is missing, mapping is unavailable, or the provider lookup fails,
+playback automatically uses https://megaplays.se/stream/mal/MAL_ID/EPISODE/sub.
+Retry Ravok refreshes the lookup and can restore the default source. Old Abyss
+language preferences no longer affect the chosen iframe.
 
-The iframe uses origin referrers and the sandbox from the supplied example:
-allow-scripts allow-same-origin allow-presentation allow-forms. Provider controls
-remain inside the iframe. Mobile full-width and landscape expansion remain
-supported. The embedded player does not report progress to Akamaru history;
-previously saved history remains readable.
+Empty episode metadata does not prevent playback attempts. The page defaults to
+episode 1 or uses the requested episode, and allows manual episode entry when
+the list is absent. Episode lists are not manufactured from a total count.
 
-No new API key is required. Vercel handles metadata/iframe-link resolution;
-video loads directly from Abyss. Local checks do not establish access from
-Vercel, so test episode resolution and actual playback after deployment.
-See [streaming integration notes](docs/streaming-api.md).
+The origin referrer and supplied iframe sandbox are preserved for Ravok. Mobile
+full-width and landscape expansion work with both providers. Actual playback
+controls and track availability belong to the iframe provider. These sources do
+not report progress to Akamaru history; saved history remains readable.
+
+No new API key or deployment variables are required. Vercel handles metadata
+and link resolution while video loads directly from the iframe provider. Build
+and deploy from the repository root, then verify actual playback and subtitles
+from the deployed site. See [streaming notes](docs/streaming-api.md).

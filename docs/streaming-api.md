@@ -1,60 +1,55 @@
-# Anime playback through Abyss
+# Ravok-first playback with MegaPlays fallback
 
-Akamaru uses Abyss players returned by AnimeLok's public episode endpoint.
-Movies Nexus, Koto/Anikage, and Anikoto are not used for episode playback.
-Old source preferences are ignored. Retired Koto/Anikoto API routes return JSON
-404s, and the interface has no alternative-server selector or fallback.
+Ravok replaces the previous Abyss language-specific players. The provider's own
+audio and subtitle controls are used. Old saved Abyss language preferences no
+longer select an iframe; no guarantee is made about available subtitle tracks.
 
-## Resolution flow
+## Resolution
 
-1. /api/nexus/MAL_ID supplies shared public ID and aired-episode metadata from
-   https://api.ani.zip/mappings?mal_id=MAL_ID. This endpoint retains its earlier
-   internal name but makes no Movies Nexus requests.
-2. /api/animelok/ANILIST_ID/EPISODE fetches the fixed upstream URL
-   https://animelok.cc/api/anilist/ANILIST_ID/EPISODE.
-3. The adapter verifies the returned AniList ID and episode number. It accepts
-   only language-labelled iframe links on https://player.abyssplayer.com with a
-   single video-ID path. Credentials, ports, queries, fragments, and foreign
-   hosts are rejected. No encrypted payloads are decoded or video URLs extracted.
-4. The browser embeds the selected language's original URL. English is preferred
-   if available, otherwise Japanese or the first returned language. A saved
-   language preference is used when available for the next episode.
+1. /api/nexus/MAL_ID obtains ID and episode metadata from Ani.zip. The internal
+   name is retained for compatibility and does not call Movies Nexus.
+2. /api/animelok/ANILIST_ID/EPISODE requests AnimeLok's fixed public episode URL
+   and validates the returned anime ID and episode number.
+3. Only https://ravok.buzz/video/VIDEO_ID iframe URLs are accepted as the preferred
+   source. Direct Abyss tracks and other server hosts are ignored. No video URL
+   extraction, encrypted-payload decoding, or video proxying is performed.
+4. Missing Ravok links, invalid provider responses, lookup failures, or missing
+   AniList mappings automatically use
+   https://megaplays.se/stream/mal/MAL_ID/EPISODE/sub.
+5. Retry Ravok requests a fresh mapping and can recover to the preferred source.
+   Episode changes resolve the next episode independently. Cancelled navigation
+   does not mount an old episode's fallback.
 
-The supplied Frieren example E-aqhQkoAa is labelled Tamil by AnimeLok. Episode 1
-has separate English and Japanese player IDs. Episode 2 returns different video
-IDs for those languages; these are resolved dynamically rather than hard-coded.
-Cyberpunk episode 1 returned no Abyss tracks during the check. Such episodes
-show an unavailable message with Retry; another host is not silently substituted.
+The supplied Frieren episode 1 Ravok URL was confirmed in AnimeLok's response.
+Its video ID is not generated or hard-coded into the episode page. Different
+episodes use their own returned link. Only the provider controls available
+inside Ravok can choose its audio and subtitle tracks.
 
-## Iframe behavior
+## Metadata and iframe behavior
 
-The player preserves the supplied origin referrer policy and sandbox permissions:
+Empty or unavailable episode metadata still permits an explicit episode or
+episode 1. A manual episode-number field is available when the list is missing.
+A valid numeric route can attempt a newly released episode absent from a stale
+list. Invalid IDs and non-positive/non-integer episode values are rejected.
+
+Ravok preserves the user's origin referrer policy and supplied sandbox:
 allow-scripts allow-same-origin allow-presentation allow-forms. Autoplay,
-encrypted media, fullscreen, and picture-in-picture permissions are enabled.
+encrypted media, fullscreen, and picture-in-picture permissions remain enabled.
+Mobile full-width and landscape expansion work with both providers. These
+cross-origin embeds do not expose watch progress to Akamaru history.
 
-Actual player controls belong to Abyss. Akamaru handles audio-language selection,
-episode navigation, reload, mobile width, and landscape expansion. It does not
-assume undocumented external control commands or playback-progress events, and
-does not fabricate watch history. Previously saved history remains readable.
+Fallback responds to source lookup availability. A loaded cross-origin iframe's
+internal video failure cannot reliably trigger it without a documented event
+bridge. No such event or undocumented subtitle control is assumed.
 
-Successful player mappings are cached for 60 seconds and concurrent requests are
-deduplicated. Reload/Retry requests a fresh mapping; missing streams and failed
-requests are not cached as successes. The gateway never proxies video bytes.
+## Verification and deployment
 
-## Deployment and verification
+Production build, TypeScript checks, and all 34 tests passed. Browser integration
+checks with simulated iframe contents cover the exact supplied Ravok URL,
+episode-specific links, old preference handling, iframe permissions, automatic
+MegaPlays fallback, recovery to Ravok, and mobile fullscreen.
 
-No new API key or environment variable is required. Build and deploy from the
-repository root with the existing configuration. Vercel must be able to reach
-Ani.zip and AnimeLok; browsers load the Abyss iframe directly. Provider outages
-or access restrictions can still prevent playback after deployment.
-
-Checks cover language mapping, exact episode matching, host restrictions,
-metadata cache/refresh behavior, absent streams, upstream errors, default English,
-the supplied Tamil embed, episode-2 language persistence, iframe permissions,
-phone width, and landscape expansion. Live provider availability must be checked
-separately from integration tests using simulated iframe contents.
-
-The production build and all 28 automated tests passed. The live English iframe
-loaded its controls and approximately 26 minutes of video metadata, but its
-overlay intercepted the automated play interaction. Continuous playback was not
-verified; test it manually and again after deployment.
+The supplied Ravok iframe returned HTTP 200 during the live check. Japanese
+subtitle availability and uninterrupted video playback were not independently
+verified. Check these after deployment; a loaded page does not guarantee tracks.
+No new API key or Vercel setting is required. No deployment was performed.
