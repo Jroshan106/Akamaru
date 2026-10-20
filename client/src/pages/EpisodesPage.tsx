@@ -9,6 +9,7 @@ import { CatalogState, NotFound, LoadingIndicator } from '../components/CatalogU
 import CinemaPlayer from '../components/CinemaPlayer';
 import type { Anime } from '../types';
 import KotoEpisodes from '../components/KotoEpisodes';
+import NexusEpisodes from '../components/NexusEpisodes';
 
 type Match = { slug: string; title: string };
 type Episode = { number: string; title: string; sub: boolean; dub: boolean };
@@ -23,7 +24,7 @@ async function get<T>(path: string, signal: AbortSignal): Promise<T> {
 
 export default function EpisodesPage() {
   const [mode, updateMode] = useState(() => {
-    try { return localStorage.getItem('akamaru-source') === 'legacy' ? 'legacy' : 'koto'; } catch { return 'koto'; }
+    try { const saved = localStorage.getItem('akamaru-source'); return saved && ['nexus', 'koto', 'legacy'].includes(saved) ? saved : 'koto'; } catch { return 'koto'; }
   });
   const setMode = (value: string) => {
     updateMode(value);
@@ -44,7 +45,7 @@ export default function EpisodesPage() {
   if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
 
-  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<ThemedSelect aria-label="Playback source" value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Akamaru · Full controls</option><option value="legacy">Anikoto · Basic controls</option></ThemedSelect></label><p className="muted">{mode === 'koto' ? 'Choose subtitles, playback speed, and video quality when available for this episode.' : 'Play with basic controls. Switch to Akamaru for subtitle, speed, and quality options.'}</p></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
+  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<ThemedSelect aria-label="Playback source" value={mode} onChange={e => setMode(e.target.value)}><option value="nexus">Movies Nexus · Provider player</option><option value="koto">Akamaru · Full controls</option><option value="legacy">Anikoto · Basic controls</option></ThemedSelect></label><p className="muted">{mode === 'nexus' ? 'Watch with Movies Nexus and use its built-in playback controls.' : mode === 'koto' ? 'Choose subtitles, playback speed, and video quality when available for this episode.' : 'Play with basic controls. Switch to Akamaru for subtitle, speed, and quality options.'}</p></div>{mode === 'nexus' ? <NexusEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
 }
 
 function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {

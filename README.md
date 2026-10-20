@@ -101,6 +101,16 @@ from Cloudflare or resolve an upstream HTTP 403.
 
 ## Player
 
+**Movies Nexus · Provider player** is available in the playback-source selector.
+It uses verified MAL-to-AniList mappings and aired episode metadata from Ani.zip,
+then loads Movies Nexus directly in the browser with Sub, Dub, or Multi-audio.
+Episode navigation stays in Akamaru; the provider's internal auto-next is disabled.
+This source does not use Koto or proxy video through Vercel. It uses the provider's
+own controls and does not expose playback progress to Akamaru history. No new API
+key or environment variable is required. Its stream availability is independent
+of the episode metadata; live checks found no Frieren streams and Cyberpunk did
+not finish loading, so it is selectable without changing the existing default.
+
 The episode page defaults to **Akamaru · Full controls**, powered by Anikage's Koto source API. An explicitly saved playback-source preference is retained. The server searches Anikage's catalog and the client selects only an exact MyAnimeList ID match automatically. If no exact match exists, the page offers the Anikoto fallback. Actual episode lists, Sub/Dub sources and skip timings come from the Koto service. No pasted watch link is required. **Anikoto · Basic controls** remains available in the source selector.
 
 This is an integration with Anikage's undocumented Koto source service, not an independent extractor or a copy of its backend. Video is played by HTML video and hls.js inside Akamaru, with captions, available manifest qualities, speed (0.5–3x), ten-second seeking, intro skipping, fullscreen and next-episode autoplay. Quality choices depend on the stream; an episode with only 1080p offers Auto and 1080p. Autoplay can require a user gesture under browser policy.

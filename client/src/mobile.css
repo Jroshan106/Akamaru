@@ -88,7 +88,8 @@ img.hero-art { width: 66%; height: 135%; object-fit: cover; object-position: cen
   .watch-layout { gap: 28px; }
   .watch-layout > *, .episode-row > div { min-width: 0; }
   .video-player { width: calc(100% + 40px); margin-left: -20px; border-radius: 0; }
-  .provider-page .watch-layout > section > .cinema-player:not(:fullscreen):not(.player-viewport) {
+  .provider-page .watch-layout > section > .cinema-player:not(:fullscreen):not(.player-viewport),
+  .provider-page .watch-layout > section > .provider-original-player:not(:fullscreen):not(.player-viewport) {
     width: calc(100% + 40px);
     margin-left: -20px;
     border-radius: 0;
