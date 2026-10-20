@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import { jikanRequest } from '../lib/jikan';
+import { useNavigate } from 'react-router-dom';
+import { jikanRequest, normalizeAnime, type JikanAnime } from '../lib/jikan';
+import type { Anime } from '../types';
+import { AnimeCard } from './CatalogUI';
 import ThemedSelect from './ThemedSelect';
 type Relation = { relation: string; entry: { mal_id: number; type: string; name: string }[] };
 function useRelations(id: string) {
@@ -25,5 +26,29 @@ export function SeasonSelect({ id, title }: { id: string; title: string }) {
 }
 export default function AnimeRelations({id}: {id:string}) {
   const {items, loading, error, retry} = useRelations(id);
-  return <section className="catalog-section"><h2>Related anime</h2>{loading ? <p role="status">Loading relations...</p> : error ? <button className="button secondary" onClick={retry}>Retry relations</button> : <div className="relations-grid">{items.flatMap(r => r.entry.filter(e=> e.type==='anime').map(e=><Link className="relation-link" key={`${r.relation}-${e.mal_id}`} to={`/anime/${e.mal_id}`}><span className="eyebrow">{r.relation}</span><strong>{e.name}</strong><ArrowRight size={18}/></Link>))}{!items.some(r=>r.entry.some(e=>e.type==='anime')) && <p className="muted">No anime relations are listed yet.</p>}</div>}</section>;
+  const [details, setDetails] = useState<{ anime: Anime; relation: string }[]>([]);
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setDetails([]); setFailed(false);
+    const entries = [...new Map(items.flatMap(r => r.entry.filter(e => e.type === 'anime' && String(e.mal_id) !== id).map(e => [e.mal_id, { ...e, relation: r.relation }] as const))).values()];
+    setPending(entries.length > 0);
+    void (async () => {
+      for (const entry of entries) {
+        if (cancelled) return;
+        try {
+          const result = await jikanRequest<{ data: JikanAnime }>(`/anime/${entry.mal_id}`);
+          if (!cancelled) setDetails(current => [...current, { anime: normalizeAnime(result.data), relation: entry.relation }]);
+        } catch { if (!cancelled) setFailed(true); }
+      }
+      if (!cancelled) setPending(false);
+    })();
+    return () => { cancelled = true; };
+  }, [items, id, attempt]);
+  const related = details.filter(d => d.anime.mediaType !== 'Music');
+  const music = details.filter(d => d.anime.mediaType === 'Music');
+  const cards = (entries: typeof details) => <div className="anime-grid relations-grid">{entries.map(({anime, relation}) => <div className="related-card" key={anime.id}><span className="eyebrow relation-label">{anime.mediaType === 'Music' ? 'Music video' : relation}</span><AnimeCard anime={anime}/></div>)}</div>;
+  return <section className="catalog-section"><h2>Related anime</h2>{related.length > 0 && cards(related)}{(loading || pending) && <p role="status">Loading related anime...</p>}{error && <button className="button secondary" onClick={retry}>Retry relations</button>}{failed && <button className="button secondary" onClick={() => setAttempt(n => n + 1)}>Retry missing posters</button>}{!loading && !pending && !error && !failed && !related.length && <p className="muted">No related anime are listed yet.</p>}{music.length > 0 && <section className="related-music"><h2>Openings &amp; endings</h2><p className="muted">Related music videos and theme songs.</p>{cards(music)}</section>}</section>;
 }

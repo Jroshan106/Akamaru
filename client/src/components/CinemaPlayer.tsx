@@ -4,23 +4,10 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize, Minimize, SkipForward, Settings, Captions, Monitor, X } from 'lucide-react';
 import './CinemaPlayer.css';
 import type Hls from 'hls.js';
+import useLandscapePlayer from '../lib/useLandscapePlayer';
 
 export type SubtitleTrack = { url: string; label: string; default?: boolean };
-type Props = { historyItem?: WatchIdentity; url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; direct?: boolean; tracks?: SubtitleTrack[]; autoStart?: boolean };
-
-function toProxiedUrl(rawUrl: string): string {
-  if (rawUrl.startsWith('https://og.bakayaro.live/m3u8/')) {
-    return rawUrl.replace('https://og.bakayaro.live/m3u8/', '/api/anikage/media/m3u8/');
-  }
-  return rawUrl;
-}
-
-function toProxiedTrackUrl(rawUrl: string): string {
-  if (rawUrl.startsWith('https://og.bakayaro.live/stream/')) {
-    return rawUrl.replace('https://og.bakayaro.live/stream/', '/api/anikage/media/subtitles/');
-  }
-  return rawUrl;
-}
+type Props = { historyItem?: WatchIdentity; url: string; title: string; intro?: [number, number] | null; outro?: [number, number] | null; onNext?: () => void; onPlaybackError?: (message: string) => void; direct?: boolean; tracks?: SubtitleTrack[]; autoStart?: boolean };
 
 function preference(key: string, defaultValue = true) {
   try {
@@ -36,10 +23,13 @@ function clock(value: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export default function CinemaPlayer({ historyItem, url, title, intro, outro, onNext, direct = false, tracks = [], autoStart = false }: Props) {
+export default function CinemaPlayer({ historyItem, url, title, intro, outro, onNext, onPlaybackError, direct = false, tracks = [], autoStart = false }: Props) {
   const speedId = useId();
-  const playbackUrl = direct ? toProxiedUrl(url) : url;
-  const proxiedTracks = tracks.map(t => ({ ...t, url: toProxiedTrackUrl(t.url) }));
+  const playbackUrl = url;
+  const proxiedTracks = tracks;
+  const selectedCaption = useRef(-1);
+  const playbackError = useRef(onPlaybackError);
+  playbackError.current = onPlaybackError;
 
   const video = useRef<HTMLVideoElement>(null);
   const hls = useRef<Hls | null>(null);
@@ -53,7 +43,7 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
     } catch { return 1; }
   });
   const frame = useRef<HTMLIFrameElement>(null);
-  const shell = useRef<HTMLDivElement>(null);
+  const { container: shell, fullscreen, viewport, toggle: toggleFullscreen } = useLandscapePlayer();
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   const manuallyPlaying = useRef<boolean | null>(null);
   const [ready, setReady] = useState(false);
@@ -68,7 +58,6 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
     recordWatch(historyItem, time, duration);
   }, [historyItem, playing, time, duration]);
   const [visible, setVisible] = useState(true);
-  const [fullscreen, setFullscreen] = useState(false);
   const [slow, setSlow] = useState(false);
   const [notice, setNotice] = useState('');
   const [menu, setMenu] = useState<'settings' | 'subtitles' | 'quality' | null>(null);
@@ -79,7 +68,7 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
   const advanced = useRef(false);
   const introSkipped = useRef(false);
   const lastSeek = useRef(0);
-  const origin = new URL(url).origin;
+  const origin = direct ? '' : new URL(url).origin;
   const supported = ['https://megaplay.buzz', 'https://megaplay.cc'].includes(origin);
 
   useEffect(() => {
@@ -89,6 +78,11 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
     setTime(0);
     setPlaying(false);
     setReady(false);
+    setDuration(0);
+    setQualities([]);
+    setQuality(-1);
+    setNotice('');
+    setSlow(false);
   }, [url]);
 
   function command(cmd: string, extra: { value?: number } = {}) {
@@ -120,11 +114,12 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
       }
     } catch {}
     setCaption(chosenTrack);
+    selectedCaption.current = chosenTrack;
 
     const syncTracks = () => {
       if (!v.textTracks) return;
       for (let i = 0; i < v.textTracks.length; i++) {
-        v.textTracks[i].mode = i === chosenTrack ? 'showing' : 'disabled';
+        v.textTracks[i].mode = i === selectedCaption.current ? 'showing' : 'disabled';
       }
     };
     v.textTracks.addEventListener('addtrack', syncTracks);
@@ -148,9 +143,10 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
         });
         engine.on(Engine.Events.ERROR, (_, data) => {
           if (data.fatal) {
-            console.warn('Playback failed:', data.type, data.details, data.response?.code);
             setSlow(true);
-            setNotice('This stream is taking longer than usual. Try reloading or check connection.');
+            const message = 'This stream could not play. Retry the episode for a fresh source, or try the Anikoto player.';
+            setNotice(message);
+            playbackError.current?.(message);
           }
         });
         engine.loadSource(playbackUrl);
@@ -216,14 +212,11 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
         lastTime = position;
       }
     }
-    function changed() { setFullscreen(document.fullscreenElement === shell.current); reveal(); }
     if (!direct) window.addEventListener('message', message);
-    document.addEventListener('fullscreenchange', changed);
     const poll = setInterval(() => command('GET_TIME'), 1000);
     const timeout = setTimeout(() => setSlow(true), 20000);
     return () => {
       window.removeEventListener('message', message);
-      document.removeEventListener('fullscreenchange', changed);
       clearInterval(poll);
       clearTimeout(timeout);
       clearTimeout(hideTimer.current);
@@ -272,14 +265,13 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
 
   async function expand() {
     try {
-      if (document.fullscreenElement === shell.current) await document.exitFullscreen();
-      else await shell.current?.requestFullscreen();
+      await toggleFullscreen();
     } catch { setNotice('Fullscreen is not available in this browser.'); }
   }
 
   if (!direct && !supported) return <div className="cinema-unavailable"><h3>This server needs its own player</h3><p>Choose an HD-1 or Vidstream-2 server to use Akamaru’s controls.</p></div>;
 
-  return <div ref={shell} className={`cinema-player ${visible || !playing || menu ? 'controls-visible' : 'controls-hidden'}`}
+  return <div ref={shell} className={`cinema-player ${viewport ? 'player-viewport' : ''} ${visible || !playing || menu ? 'controls-visible' : 'controls-hidden'}`}
     onPointerMove={reveal} onFocus={reveal} onKeyDown={event => {
       if (event.key === 'Escape') { setMenu(null); reveal(); return; }
       if (event.key === 'Tab') reveal();
@@ -327,7 +319,11 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
           options.current.onNext();
         }
       }}
-      onError={() => setNotice(playbackUrl.startsWith('blob:') ? 'Your browser cannot play this file. Try an MP4 with H.264 video and AAC audio, or a WebM file.' : 'Video playback failed. Try switching servers or reloading.')}>
+      onError={() => {
+        const message = playbackUrl.startsWith('blob:') ? 'Your browser cannot play this file. Try an MP4 with H.264 video and AAC audio, or a WebM file.' : 'Video playback failed. Retry the episode or try the Anikoto player.';
+        setNotice(message);
+        playbackError.current?.(message);
+      }}>
       {proxiedTracks.map((track, i) => (
         <track key={`${i}-${track.label}`} src={track.url} kind="subtitles" label={track.label} default={track.default} />
       ))}
@@ -367,6 +363,7 @@ export default function CinemaPlayer({ historyItem, url, title, intro, outro, on
         <label>Captions<ThemedSelect aria-label="Subtitle language" value={caption} onChange={e => {
           const selected = Number(e.target.value);
           setCaption(selected);
+          selectedCaption.current = selected;
           const list = video.current?.textTracks;
           if (list) {
             for (let i = 0; i < list.length; i++) list[i].mode = selected === i ? 'showing' : 'disabled';

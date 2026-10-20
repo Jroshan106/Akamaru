@@ -20,3 +20,17 @@ The app uses OAuth state and PKCE, refreshes access tokens when needed, and chec
 Official references: https://myanimelist.net/apiconfig/references/authorization and https://myanimelist.net/apiconfig/references/api/v2
 
 Live login/sync must be verified after credentials are configured. Automated tests use a simulated MyAnimeList server response and do not modify a real account.
+
+### Cloudflare Workers
+
+For the Worker deployment, register `https://YOUR-WORKER-DOMAIN/api/mal/callback`
+as the application's callback. Add the same four `MAL_*` variables above in
+Cloudflare → Workers & Pages → akamaru → Settings → Variables and Secrets.
+Store the client secret and cookie key as secrets, then redeploy. These values
+are read by the shared Express API through `process.env` with Node compatibility
+enabled. Each deployed domain needs a matching registered callback.
+
+Verify `/api/mal/status` returns `"configured":true`, then connect from the MAL
+button. Until configuration is complete, **Update on MyAnimeList** opens the
+title's list editor on MyAnimeList so users can update their list directly.
+After OAuth completes, Akamaru automatically reopens the tracker for that title.

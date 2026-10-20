@@ -173,25 +173,27 @@ main > .catalog-loading { width:90%; }
 .recent-watch .section-heading { flex-wrap:wrap; gap:16px; }
 .recent-watch .view-history-button { color:#fff; min-height:44px; padding:12px 18px; font-size:13px; font-weight:700; flex-shrink:0; border:1px solid #ed4d7a; box-shadow:0 4px 18px #b30f3c40; }
 .view-history-button:focus-visible { outline:2px solid #ffadc4; outline-offset:4px; }
-.history-list { display:grid; gap:18px; padding:20px 0 50px; }
-.history-card { display:flex; align-items:center; gap:24px; border:1px solid #ffffff18; border-radius:18px; padding:20px; background:#1c171d; color:inherit; transition:transform .2s,border-color .2s; animation:card-enter .4s ease-out; }
+.history-list { display:grid; gap:10px; padding:16px 0 36px; }
+.history-card { display:flex; align-items:center; gap:14px; border:1px solid #ffffff18; border-radius:12px; padding:12px 16px; background:#1c171d; color:inherit; transition:transform .2s,border-color .2s; animation:card-enter .4s ease-out; }
 .history-card:hover { transform:translateY(-3px); border-color:#eb4875; }
 .history-card:focus-visible { outline:2px solid #ff8faa; outline-offset:4px; }
-.history-card > img { width:95px; height:138px; border-radius:10px; object-fit:cover; flex-shrink:0; }
-.history-card > div { flex:1; min-width:0; }
-.history-card h2 { margin:8px 0; font-size:22px; }
-.history-card p { color:#b3a7b2; font-size:12px; margin:10px 0; }
+.history-card > img { width:56px; height:80px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+.history-card > div { flex:1; min-width:0; display:grid; gap:4px; line-height:1.3; }
+.history-card h2 { margin:0; font-size:16px; line-height:1.3; }
+.history-card strong { font-size:12px; }
+.history-card .eyebrow { font-size:8px; letter-spacing:1.5px; margin:0; }
+.history-card p { color:#b3a7b2; font-size:11px; margin:0; }
 .history-latest { border-color:#b30f3caa; background:linear-gradient(115deg,#361822,#1c171d 75%); box-shadow:inset 4px 0 #b30f3c,0 8px 30px #b30f3c12; }
 .history-progress { height:4px; background:#ffffff15; border-radius:4px; overflow:hidden; max-width:520px; }
 .history-progress span { display:block; height:100%; background:#ec4573; }
-.history-open { display:inline-flex; gap:8px; align-items:center; font-size:12px; font-weight:700; color:#ff9cb9; margin-top:14px; }
+.history-open { display:inline-flex; gap:6px; align-items:center; font-size:11px; font-weight:700; color:#ff9cb9; margin-top:2px; }
 @media(max-width:720px) {
  .library-tabs { display:flex; flex-wrap:wrap; overflow:visible; margin-right:0; padding:20px 0 14px; gap:6px; }
  .library-tabs button { padding:8px 10px; min-height:38px; font-size:11px; flex:1 0 auto; }
  .library-tabs span { margin-left:4px; }
- .history-card { gap:14px; padding:16px; }
- .history-card > img { width:72px; height:108px; }
- .history-card h2 { font-size:17px; }
+ .history-card { gap:12px; padding:10px 12px; }
+ .history-card > img { width:48px; height:70px; }
+ .history-card h2 { font-size:14px; }
  .history-card .eyebrow { font-size:9px; letter-spacing:1px; }
  .history-card strong { font-size:12px; }
  .back-link { font-size:12px; min-height:44px; }
@@ -227,7 +229,11 @@ main > .catalog-loading { width:90%; }
 .season-selector { width:min(100%,420px); margin:14px 0; }
 .season-selector label { display:grid; gap:8px; font-size:12px; }
 .season-selector small { display:block; color:#a99caa; margin-top:6px; }
-.relations-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:22px; }
+.relations-grid { grid-template-columns:repeat(auto-fill,minmax(150px,190px)); gap:22px; margin-top:22px; }
+.related-card { min-width:0; }
+.relation-label { display:block; margin-bottom:10px; font-size:9px; }
+.related-music { margin-top:32px; }
+@media(max-width:480px) { .relations-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; } }
 .relation-link { padding:20px; border:1px solid #b30f3c40; background:#211820; border-radius:14px; display:grid; gap:12px; color:#f8eef4; transition:transform .2s,border-color .2s; }
 .relation-link:hover { transform:translateY(-3px); border-color:#ec4e78; }
 .mal-track-button { color:#a6bfff; border:1px solid #526aa9; background:#263a642f; font-size:10px; font-weight:900; }

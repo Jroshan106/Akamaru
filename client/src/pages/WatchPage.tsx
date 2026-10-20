@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound } from "../components/CatalogUI";
 import { resolveId } from "../lib/jikan";
+import ProviderPlayer from '../components/ProviderPlayer';
 export default function WatchPage() {
   const { animeId, episodeId } = useParams();
   const { anime, loading, error } = useCatalog();
@@ -23,14 +24,7 @@ export default function WatchPage() {
         <section>
           <div className="video-player">
             {allowed ? (
-              <iframe
-                key={episode.id}
-                src={episode.videoUrl}
-                title={`${item.title} — ${episode.title} preview`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+              <ProviderPlayer key={episode.id} url={episode.videoUrl} title={`${item.title} — Trailer`}/>
             ) : (
               <p>This video is unavailable.</p>
             )}

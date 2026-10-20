@@ -23,7 +23,7 @@ async function get<T>(path: string, signal: AbortSignal): Promise<T> {
 
 export default function EpisodesPage() {
   const [mode, updateMode] = useState(() => {
-    try { return localStorage.getItem('akamaru-source') === 'koto' ? 'koto' : 'legacy'; } catch { return 'legacy'; }
+    try { return localStorage.getItem('akamaru-source') === 'legacy' ? 'legacy' : 'koto'; } catch { return 'koto'; }
   });
   const setMode = (value: string) => {
     updateMode(value);
@@ -44,7 +44,7 @@ export default function EpisodesPage() {
   if (error && !item) return <CatalogState />;
   if (!item) return <NotFound />;
 
-  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<ThemedSelect aria-label="Playback source" value={mode} onChange={e => setMode(e.target.value)}><option value="legacy">Anikoto · Embedded source</option><option value="koto">Koto · Direct source</option></ThemedSelect></label><p className="muted">{mode === 'koto' ? 'Direct playback supports quality and captions when provided. This source may be unavailable on the deployed site.' : 'Episodes come from an external provider. Available controls and playback depend on that provider.'}</p></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
+  return <><div className="page" style={{ paddingBottom: 0 }}><label className="provider-server">Playback source<ThemedSelect aria-label="Playback source" value={mode} onChange={e => setMode(e.target.value)}><option value="koto">Akamaru · Full controls</option><option value="legacy">Anikoto · Basic controls</option></ThemedSelect></label><p className="muted">{mode === 'koto' ? 'Choose subtitles, playback speed, and video quality when available for this episode.' : 'Play with basic controls. Switch to Akamaru for subtitle, speed, and quality options.'}</p></div>{mode === 'koto' ? <KotoEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} onFallback={() => setMode('legacy')} /> : <EpisodeBrowser key={item.id} animeItem={item} initialEpisode={episodeNumber} />}</>;
 }
 
 function EpisodeBrowser({ animeItem, initialEpisode }: { animeItem: Anime; initialEpisode?: string }) {

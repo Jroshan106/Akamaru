@@ -33,6 +33,16 @@ export function mediaUrl(value: unknown, hls = false): string | null {
   } catch { return null; }
 }
 
+// Keep provider details in the API adapter. The player receives ordinary local
+// HLS and WebVTT URLs, with no provider-specific URL rewriting in the browser.
+export function gatewayUrl(value: unknown, kind: 'm3u8' | 'subtitles'): string | null {
+  const resolved = mediaUrl(value, kind === 'm3u8');
+  if (!resolved) return null;
+  const url = new URL(resolved);
+  const match = url.pathname.match(kind === 'm3u8' ? /^\/m3u8\/([\w-]{1,8000})$/ : /^\/stream\/([\w-]{1,8000})$/);
+  return match && !url.search && !url.hash ? `/api/anikage/media/${kind}/${match[1]}` : null;
+}
+
 export function createAnikageRouter(fetcher: typeof fetch = fetch) {
   const router = Router();
   const metadata = new Map<string, { until: number; data: unknown }>();
@@ -203,14 +213,14 @@ export function createAnikageRouter(fetcher: typeof fetch = fetch) {
       const body = await response.text();
       if (body.length > 500000) throw new Error('Unexpected source response.');
       const data = JSON.parse(body);
-      const source = Array.isArray(data.sources) ? data.sources.find((s: any) => s?.isM3U8 && mediaUrl(s.url, true)) : null;
+      const source = Array.isArray(data.sources) ? data.sources.find((s: any) => s?.isM3U8 && gatewayUrl(s.url, 'm3u8')) : null;
       if (!source) throw new Error('No compatible direct stream is available for this episode.');
-      const tracks = (Array.isArray(data.subtitles) ? data.subtitles : []).filter((t: any) => t && ['captions', 'subtitles'].includes(t.kind) && mediaUrl(t.file))
-        .slice(0, 40).map((t: any) => ({ url: mediaUrl(t.file), label: String(t.label || 'Subtitles').slice(0, 80), default: t.default === true }));
+      const tracks = (Array.isArray(data.subtitles) ? data.subtitles : []).filter((t: any) => t && ['captions', 'subtitles'].includes(t.kind) && gatewayUrl(t.file, 'subtitles'))
+        .slice(0, 40).map((t: any) => ({ url: gatewayUrl(t.file, 'subtitles'), label: String(t.label || 'Subtitles').slice(0, 80), default: t.default === true }));
       const intro = Number.isFinite(data.intro?.start) && Number.isFinite(data.intro?.end) && data.intro.start >= 0 && data.intro.end > data.intro.start ? [data.intro.start, data.intro.end] : null;
       const outro = Number.isFinite(data.outro?.start) && Number.isFinite(data.outro?.end) && data.outro.start >= 0 && data.outro.end > data.outro.start ? [data.outro.start, data.outro.end] : null;
       res.setHeader('Cache-Control', 'no-store');
-      res.json({ url: mediaUrl(source.url, true), tracks, intro, outro });
+      res.json({ url: gatewayUrl(source.url, 'm3u8'), tracks, intro, outro });
     } catch (e) { res.status(502).json({ error: e instanceof Error ? e.message : 'Unable to load source.' }); }
   });
   return router;

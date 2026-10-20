@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Play, Star } from "lucide-react";
+import { Play, Star, Clapperboard } from "lucide-react";
 import { useCatalog } from "../lib/catalog";
 import { CatalogState, NotFound, SaveButton } from "../components/CatalogUI";
 import { resolveId } from "../lib/jikan";
@@ -41,6 +41,7 @@ export default function AnimeDetailPage() {
           <div className="hero-actions">
             <Link className="button primary" to={`/anime/${item.id}/episodes`}><Play size={18} /> Watch episodes</Link>
             <SaveButton id={item.id} /><MalTracker id={item.id} title={item.title} />
+            {item.episodes.some(e => e.id === 'trailer') && <Link className="save-button" to={`/watch/${item.id}/trailer`} aria-label="Watch trailer" title="Watch trailer"><Clapperboard size={20}/></Link>}
           </div>
         </div>
       </section>

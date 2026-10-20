@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { createRequire } from 'node:module';
-const { mediaUrl, createAnikageRouter, rewritePlaylist } = createRequire(import.meta.url)('../server/dist/routes/anikage.js');
+const { mediaUrl, gatewayUrl, createAnikageRouter, rewritePlaylist } = createRequire(import.meta.url)('../server/dist/routes/anikage.js');
 
 test('playlist rewriting covers relative variants, encryption keys and rejects foreign hosts', () => {
   const source = 'https://og.bakayaro.live/m3u8/master';
@@ -63,6 +63,15 @@ test('direct media URLs stay on the approved media service', () => {
   assert.equal(mediaUrl('abc_123', true), 'https://og.bakayaro.live/m3u8/abc_123');
   for (const value of ['https://evil.test/file', 'http://og.bakayaro.live/a', 'https://user@og.bakayaro.live/a', '../a', null]) assert.equal(mediaUrl(value), null);
 });
+
+test('playback URLs are local and accept only the expected provider resource', () => {
+  assert.equal(gatewayUrl('video_token', 'm3u8'), '/api/anikage/media/m3u8/video_token');
+  assert.equal(gatewayUrl('https://og.bakayaro.live/stream/captions_token', 'subtitles'), '/api/anikage/media/subtitles/captions_token');
+  for (const value of ['https://evil.test/m3u8/token', 'https://og.bakayaro.live/stream/token', 'https://og.bakayaro.live/m3u8/token?url=https://evil.test', 'https://og.bakayaro.live/m3u8/token#fragment', '../token']) {
+    assert.equal(gatewayUrl(value, 'm3u8'), null);
+  }
+  assert.equal(gatewayUrl('https://og.bakayaro.live/m3u8/token', 'subtitles'), null);
+});
 test('direct source route validates inputs and normalizes streams and subtitles', async () => {
   const calls = [];
   const app = express();
@@ -77,8 +86,9 @@ test('direct source route validates inputs and normalizes streams and subtitles'
     const response = await fetch(`${base}/Z78KNV8HKq/1?lang=dub`);
     const data = await response.json();
     assert.equal(response.status, 200);
-    assert.equal(data.url, 'https://og.bakayaro.live/m3u8/video_token');
+    assert.equal(data.url, '/api/anikage/media/m3u8/video_token');
     assert.equal(data.tracks.length, 1);
+    assert.equal(data.tracks[0].url, '/api/anikage/media/subtitles/captions_token');
     assert.deepEqual(data.intro, [63,153]);
     assert.match(calls[0], /^https:\/\/anikage\.cc\/api\/media\/anime\/Z78KNV8HKq\/episodes\/1\/sources\?provider=koto&lang=dub&server=koto$/);
     assert.equal((await fetch(`${base}/valid/nope`)).status, 400);
