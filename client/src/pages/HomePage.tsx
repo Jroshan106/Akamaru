@@ -3,6 +3,7 @@ import { ArrowRight, Play, Star, Snowflake, Flower2, Sun, Leaf } from "lucide-re
 import { useEffect, useState } from "react";
 import { RecentWatch } from './HistoryPage';
 import SeasonalAnime from '../components/SeasonalAnime';
+import UpcomingAnime from '../components/UpcomingAnime';
 import { useCatalog } from "../lib/catalog";
 import { AnimeCard, CatalogState, SaveButton } from "../components/CatalogUI";
 import { useCurrentSeason } from '../lib/seasons';
@@ -30,11 +31,11 @@ export default function HomePage() {
     const timer = window.setTimeout(() => setIndex(i => (i + 1) % count), 6500);
     return () => window.clearTimeout(timer);
   }, [running, loading, error, count, index]);
-  if (loading || error) return <><CatalogState /><div className="page"><SeasonalAnime/></div></>;
-  if (season.loading || season.error) return <><div className="main-loader" role="status"><h2>{season.name} spotlight</h2><p>{season.error || "Finding this season's top anime..."}</p>{season.error && <button className="button primary" onClick={season.retry}>Try again</button>}</div><div className="page"><RecentWatch/><SeasonalAnime/></div></>;
+  if (loading || error) return <><CatalogState /><div className="page"><SeasonalAnime/><UpcomingAnime/></div></>;
+  if (season.loading || season.error) return <><div className="main-loader" role="status"><h2>{season.name} spotlight</h2><p>{season.error || "Finding this season's top anime..."}</p>{season.error && <button className="button primary" onClick={season.retry}>Try again</button>}</div><div className="page"><RecentWatch/><SeasonalAnime/><UpcomingAnime/></div></>;
   const featured = season.items[slide];
   if (!featured)
-    return <div className="empty">The catalog is coming soon.</div>;
+    return <div className="page"><div className="empty">The catalog is coming soon.</div><UpcomingAnime/></div>;
   return (
     <>
 
@@ -74,13 +75,13 @@ export default function HomePage() {
             ))}
           </div>
           <div className="hero-actions">
-            <Link
+            {featured.status !== 'Upcoming' && <Link
               className="button primary"
               to={`/anime/${featured.id}/episodes`}
             >
               <Play size={18} fill="currentColor" />
               Watch episodes
-            </Link>
+            </Link>}
             <Link className="button secondary" to={`/anime/${featured.id}`}>
               View details <ArrowRight size={17} />
             </Link>
@@ -107,7 +108,7 @@ export default function HomePage() {
       </section>
       <div className="page">
         <RecentWatch/>
-        <SeasonalAnime/>
+        <SeasonalAnime/><UpcomingAnime/>
         <section className="catalog-section">
           <div className="section-heading">
             <div>

@@ -5,6 +5,7 @@ import jikanRoutes from './routes/jikan';
 import malRoutes from './routes/mal';
 import nexusRoutes from './routes/nexus';
 import animelokRoutes from './routes/animelok';
+import anikotoRoutes from './routes/anikoto';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/jikan', jikanRoutes);
 app.use('/api/mal', malRoutes);
 app.use('/api/nexus', nexusRoutes);
 app.use('/api/animelok', animelokRoutes);
+app.use('/api/anikoto', anikotoRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

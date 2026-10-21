@@ -21,10 +21,10 @@ function useRelations(id: string) {
 export function SeasonSelect({ id, title }: { id: string; title: string }) {
   const { items, loading, error, retry } = useRelations(id);
   const navigate = useNavigate();
-  const entries = [...new Map(items.filter(r => ['prequel','sequel','parent story','side story','spin-off','alternative version','alternative setting'].includes(r.relation.toLowerCase())).flatMap(r => r.entry.filter(e => e.type === 'anime' && String(e.mal_id) !== id).map(e => [e.mal_id, { ...e, relation:r.relation }] as const))).values()];
+  const entries = [...new Map(items.filter(r => ['prequel','sequel','parent story','side story','spin-off','alternative version'].includes(r.relation.toLowerCase())).flatMap(r => r.entry.filter(e => e.type === 'anime' && String(e.mal_id) !== id).map(e => [e.mal_id, { ...e, relation:r.relation }] as const))).values()];
   return <div className="season-selector"><label>Change seasons<ThemedSelect aria-label="Change seasons" value={id} disabled={loading || !entries.length} onChange={e => navigate(`/anime/${e.target.value}/episodes/1`)}><option value={id}>{title} (current)</option>{entries.map(e => <option key={e.mal_id} value={String(e.mal_id)}>{e.relation}: {e.name}</option>)}</ThemedSelect></label>{loading ? <small>Loading related seasons...</small> : error ? <button className="text-link" onClick={retry}>Retry seasons</button> : !entries.length ? <small>No related seasons listed.</small> : null}</div>;
 }
-export default function AnimeRelations({id}: {id:string}) {
+export default function AnimeRelations({id, title}: {id:string; title:string}) {
   const {items, loading, error, retry} = useRelations(id);
   const [details, setDetails] = useState<{ anime: Anime; relation: string }[]>([]);
   const [pending, setPending] = useState(false);
@@ -47,8 +47,9 @@ export default function AnimeRelations({id}: {id:string}) {
     })();
     return () => { cancelled = true; };
   }, [items, id, attempt]);
-  const related = details.filter(d => d.anime.mediaType !== 'Music');
+  const related = details.filter(d => d.anime.mediaType !== 'Music' && d.relation.toLowerCase() !== 'alternative setting');
+  const alternatives = details.filter(d => d.anime.mediaType !== 'Music' && d.relation.toLowerCase() === 'alternative setting');
   const music = details.filter(d => d.anime.mediaType === 'Music');
-  const cards = (entries: typeof details) => <div className="anime-grid relations-grid">{entries.map(({anime, relation}) => <div className="related-card" key={anime.id}><span className="eyebrow relation-label">{anime.mediaType === 'Music' ? 'Music video' : relation}</span><AnimeCard anime={anime}/></div>)}</div>;
-  return <section className="catalog-section"><h2>Related anime</h2>{related.length > 0 && cards(related)}{(loading || pending) && <p role="status">Loading related anime...</p>}{error && <button className="button secondary" onClick={retry}>Retry relations</button>}{failed && <button className="button secondary" onClick={() => setAttempt(n => n + 1)}>Retry missing posters</button>}{!loading && !pending && !error && !failed && !related.length && <p className="muted">No related anime are listed yet.</p>}{music.length > 0 && <section className="related-music"><h2>Openings &amp; endings</h2><p className="muted">Related music videos and theme songs.</p>{cards(music)}</section>}</section>;
+  const cards = (entries: typeof details, showRelation = true) => <div className="anime-grid relations-grid">{entries.map(({anime, relation}) => <div className="related-card" key={anime.id}>{showRelation && <span className="eyebrow relation-label">{anime.mediaType === 'Music' ? 'Music video' : relation}</span>}<AnimeCard anime={anime}/></div>)}</div>;
+  return <section className="catalog-section"><h2>Related anime</h2>{related.length > 0 && cards(related)}{(loading || pending) && <p role="status">Loading related anime...</p>}{error && <button className="button secondary" onClick={retry}>Retry relations</button>}{failed && <button className="button secondary" onClick={() => setAttempt(n => n + 1)}>Retry missing posters</button>}{!loading && !pending && !error && !failed && !related.length && <p className="muted">No related anime are listed yet.</p>}{alternatives.length > 0 && <section className="related-alternatives"><h2>If you like {title}</h2>{cards(alternatives, false)}</section>}{music.length > 0 && <section className="related-music"><h2>Openings &amp; endings</h2><p className="muted">Related music videos and theme songs.</p>{cards(music)}</section>}</section>;
 }

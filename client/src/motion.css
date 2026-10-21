@@ -232,7 +232,7 @@ main > .catalog-loading { width:90%; }
 .relations-grid { grid-template-columns:repeat(auto-fill,minmax(150px,190px)); gap:22px; margin-top:22px; }
 .related-card { min-width:0; }
 .relation-label { display:block; margin-bottom:10px; font-size:9px; }
-.related-music { margin-top:32px; }
+.related-music, .related-alternatives { margin-top:32px; }
 @media(max-width:480px) { .relations-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; } }
 .relation-link { padding:20px; border:1px solid #b30f3c40; background:#211820; border-radius:14px; display:grid; gap:12px; color:#f8eef4; transition:transform .2s,border-color .2s; }
 .relation-link:hover { transform:translateY(-3px); border-color:#ec4e78; }

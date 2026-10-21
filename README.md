@@ -91,29 +91,32 @@ from Cloudflare or resolve an upstream HTTP 403.
 
 ## Player
 
-Ravok is the default anime player, replacing the separate Abyss audio-language
-embeds. Akamaru maps MAL IDs to AniList IDs through Ani.zip, then resolves each
-episode's returned https://ravok.buzz/video/VIDEO_ID link through AnimeLok.
-Audio and subtitles are selected inside Ravok, rather than through an external
-Japanese/English selector. Track availability depends on the provider's episode.
-The supplied Frieren episode 1 URL is used only when returned for that episode;
-it is not reused for other episodes.
+Ravok remains the default anime player. Akamaru maps MAL IDs to AniList IDs using
+Ani.zip and resolves episode-specific Ravok iframe links from AnimeLok.
+Audio/subtitles remain inside the provider's player.
 
-When Ravok is missing, mapping is unavailable, or the provider lookup fails,
-playback automatically uses https://megaplays.se/stream/mal/MAL_ID/EPISODE/sub.
-Retry Ravok refreshes the lookup and can restore the default source. Old Abyss
-language preferences no longer affect the chosen iframe.
+If Ravok is missing or its lookup fails, Akamaru automatically resolves the anime
+on Anikoto using exact catalog title aliases, then requests the chosen episode's
+provider-returned iframe URL. Anikoto prefers a Sub server when available.
+Ambiguous matches, missing episodes, and unsupported player hosts show a retryable
+error instead of guessing another season or mounting a fabricated video URL.
+The old megaplays.se MAL iframe fallback is removed.
 
-Empty episode metadata does not prevent playback attempts. The page defaults to
-episode 1 or uses the requested episode, and allows manual episode entry when
-the list is absent. Episode lists are not manufactured from a total count.
+Anikoto can return its own third-party player hosts; these are validated against
+a fixed allowlist. The checked Frieren episode returned a megaplay.buzz player,
+which is separate from the removed megaplays.se MAL embed route. No media URLs
+are decrypted, generated, downloaded, or proxied by this adapter.
 
-The origin referrer and supplied iframe sandbox are preserved for Ravok. Mobile
-full-width and landscape expansion work with both providers. Actual playback
-controls and track availability belong to the iframe provider. These sources do
-not report progress to Akamaru history; saved history remains readable.
+The Anikoto HTML adapter follows the public endpoint/selector behavior described
+by [Yuzono's anime extensions](https://github.com/yuzono/anime-extensions), licensed
+under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE).
 
-No new API key or deployment variables are required. Vercel handles metadata
-and link resolution while video loads directly from the iframe provider. Build
-and deploy from the repository root, then verify actual playback and subtitles
-from the deployed site. See [streaming notes](docs/streaming-api.md).
+Missing episode metadata still allows a requested episode or episode 1, plus
+manual entry when the list is absent. Retry Ravok can restore the primary source.
+Retries also refresh Anikoto episode/server/player lookups. Cancelled navigation
+does not mount an earlier episode's fallback. Mobile full-width and landscape
+expansion are retained. These embeds do not report watch progress to Akamaru.
+
+No new credentials or Vercel settings are required. Build/deploy from the root
+and verify real playback from the deployed site: local resolution does not
+establish upstream availability from Vercel. See [streaming notes](docs/streaming-api.md).

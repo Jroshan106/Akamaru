@@ -39,13 +39,13 @@ export default function AnimeDetailPage() {
             ))}
           </div>
           <div className="hero-actions">
-            <Link className="button primary" to={`/anime/${item.id}/episodes`}><Play size={18} /> Watch episodes</Link>
+            {item.status !== 'Upcoming' && <Link className="button primary" to={`/anime/${item.id}/episodes`}><Play size={18} /> Watch episodes</Link>}
+            {item.episodes.some(e => e.id === 'trailer') && <Link className="button secondary" to={`/watch/${item.id}/trailer`}><Clapperboard size={18}/> Watch trailer</Link>}
             <SaveButton id={item.id} /><MalTracker id={item.id} title={item.title} />
-            {item.episodes.some(e => e.id === 'trailer') && <Link className="save-button" to={`/watch/${item.id}/trailer`} aria-label="Watch trailer" title="Watch trailer"><Clapperboard size={20}/></Link>}
           </div>
         </div>
       </section>
-      <AnimeRelations id={item.id}/>
+      <AnimeRelations id={item.id} title={item.title}/>
     </div>
   );
 }

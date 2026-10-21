@@ -1,55 +1,56 @@
-# Ravok-first playback with MegaPlays fallback
+# Ravok-first playback with Anikoto fallback
 
-Ravok replaces the previous Abyss language-specific players. The provider's own
-audio and subtitle controls are used. Old saved Abyss language preferences no
-longer select an iframe; no guarantee is made about available subtitle tracks.
+Ravok is preferred. Anikoto replaces the failed megaplays.se MAL embed fallback.
+Ravok resolution still uses verified AniList IDs and episode-specific AnimeLok
+responses, accepting only https://ravok.buzz/video/VIDEO_ID links.
 
-## Resolution
+## Anikoto resolution
 
-1. /api/nexus/MAL_ID obtains ID and episode metadata from Ani.zip. The internal
-   name is retained for compatibility and does not call Movies Nexus.
-2. /api/animelok/ANILIST_ID/EPISODE requests AnimeLok's fixed public episode URL
-   and validates the returned anime ID and episode number.
-3. Only https://ravok.buzz/video/VIDEO_ID iframe URLs are accepted as the preferred
-   source. Direct Abyss tracks and other server hosts are ignored. No video URL
-   extraction, encrypted-payload decoding, or video proxying is performed.
-4. Missing Ravok links, invalid provider responses, lookup failures, or missing
-   AniList mappings automatically use
-   https://megaplays.se/stream/mal/MAL_ID/EPISODE/sub.
-5. Retry Ravok requests a fresh mapping and can recover to the preferred source.
-   Episode changes resolve the next episode independently. Cancelled navigation
-   does not mount an old episode's fallback.
+1. The client calls /api/anikoto/resolve/MAL_ID after Ravok fails, returns no
+   player, or cannot be attempted without an AniList mapping.
+2. The server gets catalog title aliases from Tenrai, searches Anikoto's public
+   listings, and accepts only one exact normalized alias match. Ambiguous results
+   are refused; the client also verifies that the resolved MAL ID matches.
+3. /api/anikoto/SLUG/episodes/NUMBER/players reads the real episode list, server
+   identifiers, and selected provider-returned embed URL. Sub is preferred when
+   listed; the returned audio type is displayed accurately.
+4. HTTPS embeds are permitted only on megaplay.buzz, megaplay.cc, and
+   mewcdn.online, without credentials or explicit ports. Unknown hosts show an
+   error. No guessed embed template or megaplays.se request remains.
 
-The supplied Frieren episode 1 Ravok URL was confirmed in AnimeLok's response.
-Its video ID is not generated or hard-coded into the episode page. Different
-episodes use their own returned link. Only the provider controls available
-inside Ravok can choose its audio and subtitle tracks.
+Anikoto chooses its own underlying video hosts. A live local Frieren episode 1
+check returned a Sub player on megaplay.buzz, which is a different hostname and
+provider-resolved URL from the removed megaplays.se MAL route. This is iframe
+integration, not stream extraction, decryption, or a media proxy.
 
-## Metadata and iframe behavior
+The client labels Anikoto only after a valid player is resolved. Missing titles,
+missing episodes, malformed responses, blocked hosts, and unavailable providers
+show a retry message instead of a blank/invalid iframe. Retry refreshes episode,
+server, and embed lookup responses. Retry Ravok can recover to the preferred
+source. Abort checks prevent mounting a fallback after leaving an episode.
 
-Empty or unavailable episode metadata still permits an explicit episode or
-episode 1. A manual episode-number field is available when the list is missing.
-A valid numeric route can attempt a newly released episode absent from a stale
-list. Invalid IDs and non-positive/non-integer episode values are rejected.
+## Metadata and UI
 
-Ravok preserves the user's origin referrer policy and supplied sandbox:
-allow-scripts allow-same-origin allow-presentation allow-forms. Autoplay,
-encrypted media, fullscreen, and picture-in-picture permissions remain enabled.
-Mobile full-width and landscape expansion work with both providers. These
-cross-origin embeds do not expose watch progress to Akamaru history.
+The existing /api/nexus/MAL_ID route supplies Ani.zip ID and episode metadata;
+it does not call Movies Nexus. Missing metadata permits a requested episode or
+episode 1 and manual entry. Anikoto can resolve from the MAL catalog identity
+without an AniList mapping. Episode navigation remains in Akamaru.
 
-Fallback responds to source lookup availability. A loaded cross-origin iframe's
-internal video failure cannot reliably trigger it without a documented event
-bridge. No such event or undocumented subtitle control is assumed.
+Ravok retains the supplied iframe sandbox and origin referrer. The Anikoto
+fallback uses the provider's native player with autoplay/fullscreen permissions.
+Mobile full-width and landscape expansion remain supported. Provider controls,
+track availability, and video availability belong to the provider. These embeds
+do not expose progress events for Akamaru history.
 
-## Verification and deployment
+## Checks and deployment
 
-Production build, TypeScript checks, and all 34 tests passed. Browser integration
-checks with simulated iframe contents cover the exact supplied Ravok URL,
-episode-specific links, old preference handling, iframe permissions, automatic
-MegaPlays fallback, recovery to Ravok, and mobile fullscreen.
+Production build, TypeScript checks, and all 42 tests passed. Browser integration
+checks with simulated provider frames covered Ravok priority, Anikoto fallback
+for the exact episode, recovery to Ravok, fallback error/retry, mobile sizing,
+and absence of the removed megaplays.se URL.
 
-The supplied Ravok iframe returned HTTP 200 during the live check. Japanese
-subtitle availability and uninterrupted video playback were not independently
-verified. Check these after deployment; a loaded page does not guarantee tracks.
-No new API key or Vercel setting is required. No deployment was performed.
+Live local Anikoto catalog matching and Frieren episode 1 resolution passed;
+continuous playback and access from Vercel are not established by that check.
+No new environment variable or API key is required. Deploy from the repository
+root using the existing configuration, then verify actual video playback on the
+deployed site. No deployment was performed.

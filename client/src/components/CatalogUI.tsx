@@ -45,8 +45,8 @@ export function AnimeCard({ anime }: { anime: Anime }) {
           {anime.rating ? anime.rating.toFixed(1) : "N/A"}
         </span>
         <SaveButton id={anime.id} />
-        <span className="poster-tag">
-          {anime.episodeCount
+        <span className={`poster-tag${anime.status === 'Upcoming' ? ' upcoming-badge' : ''}`}>
+          {anime.status === 'Upcoming' ? 'Upcoming' : anime.episodeCount
             ? `${anime.episodeCount} episodes`
             : "Episodes TBA"}
         </span>

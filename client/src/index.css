@@ -455,6 +455,11 @@ main {
   transition: opacity 0.2s;
   font-size: 13px;
 }
+.upcoming-badge {
+  background: #a80c3c;
+  color: #fff;
+  font-weight: 700;
+}
 .poster:hover .poster-play {
   opacity: 1;
 }
