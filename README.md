@@ -82,6 +82,12 @@ Only `/api` and `/api/*` run through Express; static files in `client/dist` and
 React deep links are served by Workers Static Assets with SPA fallback.
 Vercel and standalone Node entry points remain separate.
 
+Provider requests use `redirect: 'manual'` and reject non-success responses.
+Cloudflare Workers does not support `redirect: 'error'`; using it prevents the
+request from being sent. Redirects are not automatically followed. Rebuild and
+redeploy the root project to apply this fix and the current player interface.
+
+
 After building, use `npx wrangler deploy --dry-run` to validate the bundle, or
 `npx wrangler dev` to test the Workers runtime locally. Check `/api/health`,
 an unknown `/api/*` route (JSON 404), and a deep link such as
@@ -91,16 +97,15 @@ from Cloudflare or resolve an upstream HTTP 403.
 
 ## Player
 
-Ravok remains the default anime player. Akamaru maps MAL IDs to AniList IDs using
-Ani.zip and resolves episode-specific Ravok iframe links from AnimeLok.
-Audio/subtitles remain inside the provider's player.
+Abyss is the default multi-language player, replacing Ravok. Akamaru resolves
+real per-language Abyss iframe links from AnimeLok using the verified AniList
+mapping. Anikoto supplies Japanese Sub and English Dub. Server and language
+choices use buttons, and unavailable audio options are disabled.
 
-If Ravok is missing or its lookup fails, Akamaru automatically resolves the anime
-on Anikoto using exact catalog title aliases, then requests the chosen episode's
-provider-returned iframe URL. Anikoto prefers a Sub server when available.
-Ambiguous matches, missing episodes, and unsupported player hosts show a retryable
-error instead of guessing another season or mounting a fabricated video URL.
-The old megaplays.se MAL iframe fallback is removed.
+If the selected server lookup fails, the other server is tried automatically.
+Anikoto resolves exact catalog title aliases and actual episode embeds; ambiguous
+matches and unsupported hosts show a retryable error. The old megaplays.se
+MAL iframe fallback remains removed.
 
 Anikoto can return its own third-party player hosts; these are validated against
 a fixed allowlist. The checked Frieren episode returned a megaplay.buzz player,
@@ -112,7 +117,8 @@ by [Yuzono's anime extensions](https://github.com/yuzono/anime-extensions), lice
 under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE).
 
 Missing episode metadata still allows a requested episode or episode 1, plus
-manual entry when the list is absent. Retry Ravok can restore the primary source.
+the Anikoto episode list when available and manual entry only if both lists are
+absent. Retry preferred server restores the originally selected source.
 Retries also refresh Anikoto episode/server/player lookups. Cancelled navigation
 does not mount an earlier episode's fallback. Mobile full-width and landscape
 expansion are retained. These embeds do not report watch progress to Akamaru.
@@ -120,3 +126,9 @@ expansion are retained. These embeds do not report watch progress to Akamaru.
 No new credentials or Vercel settings are required. Build/deploy from the root
 and verify real playback from the deployed site: local resolution does not
 establish upstream availability from Vercel. See [streaming notes](docs/streaming-api.md).
+
+Abyss uses a sandbox that blocks popups and top-page navigation by default.
+Its compatibility button can remove it if playback fails and restore it later.
+Anikoto is unsandboxed: its live player explicitly rejects sandboxed embeds.
+Ads inside the embedded video cannot be removed by Akamaru. Audio/subtitle
+controls and availability belong to the provider.

@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useCatalog } from '../lib/catalog';
 import { resolveId } from '../lib/jikan';
 import { CatalogState, NotFound } from '../components/CatalogUI';
-import RavokEpisodes from '../components/RavokEpisodes';
+import StreamingEpisodes from '../components/StreamingEpisodes';
 
 export default function EpisodesPage() {
   const { id, episodeNumber } = useParams();
@@ -17,5 +17,5 @@ export default function EpisodesPage() {
   );
   if (loading || (error && !item)) return <CatalogState />;
   if (!item) return <NotFound />;
-  return <RavokEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} />;
+  return <StreamingEpisodes key={item.id} anime={item} initialEpisode={episodeNumber} />;
 }

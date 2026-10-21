@@ -51,7 +51,7 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
     if (running) return running;
     if (pending.size >= 6) throw new Error('Anikoto is busy. Please try again shortly.');
     const work = (async () => {
-      const response = await fetcher(`${origin}${path}`, { redirect: 'error', signal: AbortSignal.timeout(7000),
+      const response = await fetcher(`${origin}${path}`, { redirect: 'manual', signal: AbortSignal.timeout(7000),
         headers: { Referer: referer, 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html, application/json' } });
       if (!response.ok) throw new Error(`Anikoto is unavailable (HTTP ${response.status}). Try again later.`);
       const text = await response.text();
@@ -80,7 +80,7 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
   router.get('/resolve/:malId', async (req, res) => {
     if (!/^[1-9]\d{0,8}$/.test(req.params.malId)) { res.status(400).json({error:'Invalid anime ID.'}); return; }
     try {
-      const response = await fetcher(`https://api.tenrai.org/v1/anime/${req.params.malId}`, { signal: AbortSignal.timeout(8000), redirect:'error' });
+      const response = await fetcher(`https://api.tenrai.org/v1/anime/${req.params.malId}`, { signal: AbortSignal.timeout(8000), redirect:'manual' });
       if (!response.ok) throw new Error('The catalog could not resolve this anime ID.');
       const { data } = await response.json() as {data?: {title?:string;title_english?:string;title_japanese?:string}};
       const aliases: string[] = [...new Set<string>([data?.title, data?.title_english, data?.title_japanese].filter((v): v is string => typeof v === 'string' && v.length > 0))];
@@ -106,6 +106,8 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
   });
   router.get('/:slug/episodes/:number/players', async (req, res) => {
     const { slug, number } = req.params;
+    const language = req.query.language;
+    if (language !== undefined && language !== 'sub' && language !== 'dub') { res.status(400).json({ error: 'Invalid audio language.' }); return; }
     if (!slugPattern.test(slug) || !/^\d+(?:\.\d+)?$/.test(number)) { res.status(400).json({ error: 'Invalid episode.' }); return; }
     try {
       const availableEpisodes = await episodes(slug, req.query.refresh === '1');
@@ -118,7 +120,8 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
       const candidates = $('[data-link-id]').toArray().map(el => ({
         id: $(el).attr('data-link-id')!, name: $(el).text().trim(), language: $(el).closest('[data-type]').attr('data-type') || 'sub',
       }));
-      const preferredSub = candidates.findIndex(s => s.language === 'sub');
+      const preferredSub = candidates.findIndex(s => s.language === (language || 'sub'));
+      if (language && preferredSub < 0) { res.status(404).json({ error: `Anikoto has no ${language} server for this episode.` }); return; }
       const index = req.query.server === undefined ? Math.max(0, preferredSub) : Number(req.query.server);
       if (!Number.isSafeInteger(index) || index < 0 || index >= candidates.length) {
         res.status(404).json({ error: 'No matching episode server is available.' }); return;
@@ -130,6 +133,7 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
       const rawIntro = data.skip_data?.intro;
       const intro = Array.isArray(rawIntro) && rawIntro.length === 2 && rawIntro.every(Number.isFinite) && rawIntro[0] >= 0 && rawIntro[1] > rawIntro[0] ? rawIntro : null;
       res.json({ url, language: selected.language, intro, externalUrl: referer,
+        languages: [...new Set(candidates.map(s => s.language).filter(l => l === 'sub' || l === 'dub'))],
         episodes: availableEpisodes.map(({ number, title }) => ({ number, title })),
         servers: candidates.map((s, i) => ({ id: i, name: s.name, language: s.language })),
         message: url ? '' : 'This host cannot be embedded here. Choose another server or open the episode on Anikoto.' });

@@ -1,56 +1,47 @@
-# Ravok-first playback with Anikoto fallback
+# Abyss and Anikoto playback
 
-Ravok is preferred. Anikoto replaces the failed megaplays.se MAL embed fallback.
-Ravok resolution still uses verified AniList IDs and episode-specific AnimeLok
-responses, accepting only https://ravok.buzz/video/VIDEO_ID links.
+Abyss is the default multi-language server. `/api/animelok/ANILIST_ID/EPISODE`
+validates the response identity and returns only real HTTPS
+`player.abyssplayer.com/VIDEO_ID` links. Language choices come from the episode's
+track list; no static sample is reused for other episodes. Ravok is no longer used.
 
-## Anikoto resolution
+Anikoto supports Japanese Sub and English Dub. `/api/anikoto/resolve/MAL_ID`
+uses exact catalog aliases, refusing ambiguous seasons. The player's endpoint
+`/api/anikoto/SLUG/episodes/NUMBER/players?language=sub|dub` selects the requested
+audio and returns available languages, the actual episode list, and a validated
+provider-returned embed. Missing audio returns an error rather than silently
+playing a different language. HTTPS embeds are limited to megaplay.buzz,
+megaplay.cc, and mewcdn.online. The retired megaplays.se template is not used.
+No media extraction, decryption, downloading, or proxying occurs.
 
-1. The client calls /api/anikoto/resolve/MAL_ID after Ravok fails, returns no
-   player, or cannot be attempted without an AniList mapping.
-2. The server gets catalog title aliases from Tenrai, searches Anikoto's public
-   listings, and accepts only one exact normalized alias match. Ambiguous results
-   are refused; the client also verifies that the resolved MAL ID matches.
-3. /api/anikoto/SLUG/episodes/NUMBER/players reads the real episode list, server
-   identifiers, and selected provider-returned embed URL. Sub is preferred when
-   listed; the returned audio type is displayed accurately.
-4. HTTPS embeds are permitted only on megaplay.buzz, megaplay.cc, and
-   mewcdn.online, without credentials or explicit ports. Unknown hosts show an
-   error. No guessed embed template or megaplays.se request remains.
+Server buttons switch providers. Abyss language buttons switch returned tracks;
+Anikoto buttons resolve Sub or Dub. The selected server is tried first, then the
+other if lookup fails. The UI identifies fallback and offers a retry of the
+preferred server. Aborted requests cannot mount stale players. Cross-origin
+iframe playback errors cannot be reliably detected; users can switch servers
+or retry if the video fails later.
 
-Anikoto chooses its own underlying video hosts. A live local Frieren episode 1
-check returned a Sub player on megaplay.buzz, which is a different hostname and
-provider-resolved URL from the removed megaplays.se MAL route. This is iframe
-integration, not stream extraction, decryption, or a media proxy.
+`/api/nexus/MAL_ID` still supplies Ani.zip mapping/metadata, without calling
+Movies Nexus. Missing metadata uses Anikoto's real episode list in the same
+sidebar with titles and Previous/Next navigation. Manual entry remains only
+when neither list is available. Mobile fullscreen behavior remains.
 
-The client labels Anikoto only after a valid player is resolved. Missing titles,
-missing episodes, malformed responses, blocked hosts, and unavailable providers
-show a retry message instead of a blank/invalid iframe. Retry refreshes episode,
-server, and embed lookup responses. Retry Ravok can recover to the preferred
-source. Abort checks prevent mounting a fallback after leaving an episode.
+Abyss uses `allow-scripts allow-same-origin allow-presentation allow-forms`
+and origin referrers. Popups and top navigation are excluded. Its compatibility
+button removes sandboxing for that embed if needed and can restore protection.
+Anikoto is unsandboxed because its live player explicitly refuses sandboxed
+iframes. This cannot remove in-video or in-frame ads. Provider players do not
+expose progress events for Akamaru history.
 
-## Metadata and UI
+Live checks: Frieren episode 1 returned five Abyss languages, and the sandboxed
+Abyss page created its video player. Anikoto returned both Sub and Dub options;
+its sandboxed page reported that sandboxing was forbidden. These checks do not
+establish continuous playback or availability from a Vercel deployment.
 
-The existing /api/nexus/MAL_ID route supplies Ani.zip ID and episode metadata;
-it does not call Movies Nexus. Missing metadata permits a requested episode or
-episode 1 and manual entry. Anikoto can resolve from the MAL catalog identity
-without an AniList mapping. Episode navigation remains in Akamaru.
+No new credentials or deployment settings are required. Deploy from the root
+with the existing Vercel configuration and verify playback from that deployment;
+local resolution does not establish provider availability from Vercel.
 
-Ravok retains the supplied iframe sandbox and origin referrer. The Anikoto
-fallback uses the provider's native player with autoplay/fullscreen permissions.
-Mobile full-width and landscape expansion remain supported. Provider controls,
-track availability, and video availability belong to the provider. These embeds
-do not expose progress events for Akamaru history.
-
-## Checks and deployment
-
-Production build, TypeScript checks, and all 42 tests passed. Browser integration
-checks with simulated provider frames covered Ravok priority, Anikoto fallback
-for the exact episode, recovery to Ravok, fallback error/retry, mobile sizing,
-and absence of the removed megaplays.se URL.
-
-Live local Anikoto catalog matching and Frieren episode 1 resolution passed;
-continuous playback and access from Vercel are not established by that check.
-No new environment variable or API key is required. Deploy from the repository
-root using the existing configuration, then verify actual video playback on the
-deployed site. No deployment was performed.
+The Anikoto HTML adapter follows public selectors/endpoints described by
+[Yuzono's anime extensions](https://github.com/yuzono/anime-extensions), licensed
+under [Apache-2.0](https://github.com/yuzono/anime-extensions/blob/master/LICENSE).

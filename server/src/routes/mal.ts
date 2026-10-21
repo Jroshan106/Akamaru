@@ -29,7 +29,7 @@ export function createMalRouter(fetcher: typeof fetch = fetch, config?: Config) 
   }
   async function tokens(params:URLSearchParams) {
     params.set('client_id',cfg().clientId); params.set('client_secret',cfg().clientSecret);
-    const response=await fetcher('https://myanimelist.net/v1/oauth2/token',{method:'POST',body:params,signal:AbortSignal.timeout(10000),redirect:'error'});
+    const response=await fetcher('https://myanimelist.net/v1/oauth2/token',{method:'POST',body:params,signal:AbortSignal.timeout(10000),redirect:'manual'});
     if (!response.ok) throw new Error('MyAnimeList sign-in expired. Please reconnect.');
     const data=await response.json() as {access_token:string;refresh_token:string;expires_in:number};
     if (typeof data.access_token!=='string' || typeof data.refresh_token!=='string' || !Number.isFinite(data.expires_in)) throw new Error('Invalid sign-in response.');
@@ -73,7 +73,7 @@ export function createMalRouter(fetcher: typeof fetch = fetch, config?: Config) 
     if (!/^[1-9]\d*$/.test(req.params.id)) {res.status(400).json({error:'Invalid anime ID.'});return;}
     try {
       const value=await session(req,res);
-      const response=await fetcher(`https://api.myanimelist.net/v2/anime/${req.params.id}?fields=my_list_status,num_episodes`,{headers:{Authorization:`Bearer ${value.access}`},signal:AbortSignal.timeout(10000),redirect:'error'});
+      const response=await fetcher(`https://api.myanimelist.net/v2/anime/${req.params.id}?fields=my_list_status,num_episodes`,{headers:{Authorization:`Bearer ${value.access}`},signal:AbortSignal.timeout(10000),redirect:'manual'});
       if (!response.ok) {res.status(response.status===401 ? 401 : 502).json({error:'Could not read your MyAnimeList entry. Reconnect or try again.'});return;}
       const data=await response.json() as {my_list_status?:unknown;num_episodes?:number}; res.json({entry:data.my_list_status || null,total:data.num_episodes || 0});
     } catch(e) {res.status(401).json({error:e instanceof Error ? e.message : 'Reconnect MyAnimeList.'});}
@@ -83,7 +83,7 @@ export function createMalRouter(fetcher: typeof fetch = fetch, config?: Config) 
     if (!/^[1-9]\d*$/.test(req.params.id) || !['watching','completed','on_hold','dropped','plan_to_watch'].includes(status) || !Number.isInteger(episodes) || episodes<0 || episodes>100000 || !Number.isInteger(score) || score<0 || score>10) {res.status(400).json({error:'Choose a valid status, episode count, and score.'});return;}
     try {
       const value=await session(req,res);
-      const response=await fetcher(`https://api.myanimelist.net/v2/anime/${req.params.id}/my_list_status`,{method:'PATCH',headers:{Authorization:`Bearer ${value.access}`},body:new URLSearchParams({status,num_watched_episodes:String(episodes),score:String(score)}),signal:AbortSignal.timeout(10000),redirect:'error'});
+      const response=await fetcher(`https://api.myanimelist.net/v2/anime/${req.params.id}/my_list_status`,{method:'PATCH',headers:{Authorization:`Bearer ${value.access}`},body:new URLSearchParams({status,num_watched_episodes:String(episodes),score:String(score)}),signal:AbortSignal.timeout(10000),redirect:'manual'});
       if (!response.ok) {res.status(response.status===401 ? 401 : 502).json({error:'MyAnimeList did not save the update. Please retry or reconnect.'});return;}
       res.json({entry:await response.json()});
     } catch(e) {res.status(401).json({error:e instanceof Error ? e.message : 'Reconnect MyAnimeList.'});}

@@ -8,6 +8,7 @@ const config={clientId:'test-id',clientSecret:'test-secret',redirect:'http://loc
 test('MAL OAuth validates state, encrypts tokens, and rejects cross-origin writes',async()=>{
  const calls=[];
  const app=express();app.use(express.json());app.use('/api/mal',createMalRouter(async(url,init)=>{
+  assert.equal(init.redirect, 'manual');
   calls.push({url,init});
   if(url.includes('/token'))return Response.json({access_token:'private-access',refresh_token:'private-refresh',expires_in:3600});
   if(init?.method==='PATCH')return Response.json({status:'watching',num_episodes_watched:2});

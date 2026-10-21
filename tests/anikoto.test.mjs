@@ -76,3 +76,24 @@ test('ID resolver uses catalog aliases and refuses ambiguous title matches', asy
   finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
  }
 });
+
+
+test('Anikoto language choice selects dub and rejects invalid language', async () => {
+  const mock = async url => {
+    if (url.endsWith('/watch/example')) return new Response('<div class="watch-wrap" data-id="123"></div>');
+    let result;
+    if (url.includes('/ajax/episode/list/')) result = '<div class="episodes"><ul><li><a data-num="1" data-ids="abc"></a></li></ul></div>';
+    else if (url.includes('/ajax/server/list?')) result = '<div data-type="sub"><li data-link-id="sub-id">Sub</li></div><div data-type="dub"><li data-link-id="dub-id">Dub</li></div>';
+    else { assert.ok(url.endsWith('get=dub-id')); result = { url: 'https://megaplay.buzz/dub' }; }
+    return Response.json({ status: 200, result });
+  };
+  const app = express(); app.use('/api', createAnikotoRouter(mock));
+  const server = app.listen(0, '127.0.0.1'); await new Promise(r => server.once('listening', r));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}/api/example/episodes/1/players`;
+    const response = await fetch(`${base}?language=dub`); const body = await response.json();
+    assert.equal(response.status, 200); assert.equal(body.language, 'dub');
+    assert.deepEqual(body.languages, ['sub', 'dub']); assert.equal(body.url, 'https://megaplay.buzz/dub');
+    assert.equal((await fetch(`${base}?language=other`)).status, 400);
+  } finally { server.closeAllConnections(); await new Promise(r => server.close(r)); }
+});

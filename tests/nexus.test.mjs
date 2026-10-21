@@ -31,7 +31,7 @@ test('Nexus uses verified AniList mapping and aired episode metadata, not MAL ID
 test('Nexus validates IDs, caches metadata, and uses only the fixed metadata host', async () => {
   let calls = 0;
   await withRouter(async (url, options) => {
-    calls++; assert.equal(url, 'https://api.ani.zip/mappings?mal_id=52991'); assert.equal(options.redirect, 'error');
+    calls++; assert.equal(url, 'https://api.ani.zip/mappings?mal_id=52991'); assert.equal(options.redirect, 'manual');
     return Response.json(payload);
   }, async base => {
     for (const id of ['52991', '52991']) {

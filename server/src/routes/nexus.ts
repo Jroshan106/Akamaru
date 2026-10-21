@@ -38,7 +38,7 @@ export function createNexusRouter(fetcher: typeof fetch = fetch) {
       if (!request) {
         if (pending.size >= 8) { res.status(503).json({ error: 'Anime mapping is busy. Please retry shortly.' }); return; }
         request = (async () => {
-          const response = await fetcher(`https://api.ani.zip/mappings?mal_id=${id}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000), redirect: 'error' });
+          const response = await fetcher(`https://api.ani.zip/mappings?mal_id=${id}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000), redirect: 'manual' });
           if (!response.ok) throw new Error('Anime ID mapping is temporarily unavailable. Please retry shortly.');
           const body = await response.text();
           if (body.length > 5_000_000) throw new Error('Unexpected anime mapping response.');

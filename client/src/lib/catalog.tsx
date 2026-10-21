@@ -63,6 +63,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const known = useRef(new Map<string, Anime>());
   const remember = useCallback((items: Anime[]) => { items.forEach(item => known.current.set(item.id, item)); }, []);
   const { pathname, search } = useLocation();
+  // Episode changes reuse the same title data and keep player preferences mounted.
+  const catalogPath = pathname.replace(/^(\/(?:anime|watch)\/[^/]+).*$/, '$1');
   const watchlistKey = pathname === "/watchlist" ? saved.join(",") : "";
   useEffect(() => {
     let cancelled = false;
@@ -74,8 +76,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         let items: Anime[] = [];
         let count = 0;
         let next = false;
-        const detailId = pathname.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
-        if (pathname === '/history') {
+        const detailId = catalogPath.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
+        if (catalogPath === '/history') {
           // Watch history does not depend on the online catalog.
           items = [];
         } else if (detailId) {
@@ -100,7 +102,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
               }
             }
           }
-        } else if (pathname === "/watchlist") {
+        } else if (catalogPath === "/watchlist") {
           const ids = watchlistKey.split(",").filter(Boolean);
           for (const id of ids) {
             if (cancelled) return;
@@ -131,7 +133,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           count = items.length;
         } else {
           let path = "/top/anime?sfw=true&limit=24";
-          if (pathname === "/browse") {
+          if (catalogPath === "/browse") {
             const response = await jikanRequest<{ data: Genre[] }>(
               "/genres/anime",
             );
@@ -169,12 +171,12 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setLoading(false);
       }
     }
-    const timer = setTimeout(load, pathname === "/browse" ? 400 : 0);
+    const timer = setTimeout(load, catalogPath === "/browse" ? 400 : 0);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [pathname, search, attempt, watchlistKey]);
+  }, [catalogPath, search, attempt, watchlistKey]);
   const toggle = (id: string) => {
     const next = saved.includes(id)
       ? saved.filter((item) => item !== id)
