@@ -6,6 +6,7 @@ import malRoutes from './routes/mal';
 import nexusRoutes from './routes/nexus';
 import animelokRoutes from './routes/animelok';
 import anikotoRoutes from './routes/anikoto';
+import languageCatalogRoutes from './routes/languageCatalog';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/mal', malRoutes);
 app.use('/api/nexus', nexusRoutes);
 app.use('/api/animelok', animelokRoutes);
 app.use('/api/anikoto', anikotoRoutes);
+app.use('/api/language-catalog', languageCatalogRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
+import SeasonalPage from './pages/SeasonalPage';
 import WatchPage from "./pages/WatchPage";
 import AnimeDetailPage from "./pages/AnimeDetailPage";
 import EpisodesPage from "./pages/EpisodesPage";
@@ -26,6 +27,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/seasonal" element={<SeasonalPage />} />
             <Route path="/watchlist" element={<LibraryPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />

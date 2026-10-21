@@ -13,11 +13,12 @@ export default function BrowsePage({
   const [params, setParams] = useSearchParams();
   const search = params.get("search") || "";
   const genre = params.get("genre") || "";
-  const status = params.get("status") || "";
+  const language = params.get("language") || "";
   const sort = params.get("sort") || "rating";
   const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
+    next.delete('status');
     if (key !== "page") next.delete("page");
     if (value) next.set(key, value);
     else next.delete(key);
@@ -31,8 +32,7 @@ export default function BrowsePage({
           `${a.title} ${a.japaneseTitle} ${a.synopsis}`
             .toLowerCase()
             .includes(search.toLowerCase()) &&
-          (!genre || a.genres.includes(genre)) &&
-          (!status || a.status === status)),
+          (!genre || a.genres.includes(genre))),
     )
     .sort((a, b) =>
       !watchlist
@@ -84,16 +84,15 @@ export default function BrowsePage({
           </ThemedSelect>
         </label>
         <label>
-          Status
+          Language
           <ThemedSelect
-            aria-label="Status"
-            value={status}
-            onChange={(e) => update("status", e.target.value)}
+            aria-label="Language"
+            value={language}
+            onChange={(e) => update("language", e.target.value)}
           >
-            <option value="">All statuses</option>
-            {["Airing", "Completed", "Upcoming"].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
+            <option value="">All languages</option>
+            <option value="sub">Japanese · Sub</option>
+            <option value="dub">English · Dub</option>
           </ThemedSelect>
         </label>
         <label>
@@ -105,13 +104,14 @@ export default function BrowsePage({
           </ThemedSelect>
         </label>
       </div>
+      {language && <p className="muted">Sub and dub listings from Anikoto. Availability can vary by episode.</p>}
       {loading || error ? (
         <CatalogState />
       ) : (
         <>
           <div className="results-count">
             {watchlist ? results.length : total.toLocaleString()} titles{" "}
-            {watchlist ? "in your list" : `· Page ${page}`}
+            {watchlist ? "in your list" : language ? `on this page · Page ${page}` : `· Page ${page}`}
           </div>
           {results.length ? (
             <div className="anime-grid">

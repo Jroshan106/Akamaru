@@ -132,3 +132,20 @@ Its compatibility button can remove it if playback fails and restore it later.
 Anikoto is unsandboxed: its live player explicitly rejects sandboxed embeds.
 Ads inside the embedded video cannot be removed by Akamaru. Audio/subtitle
 controls and availability belong to the provider.
+
+## Browse languages and seasonal archive
+
+Browse replaces the Status control with All languages, Japanese Sub, and English
+Dub. The filtered catalog uses Anikoto's actual audio listings, combines search,
+genre, sort, and provider pagination, and resolves exact MAL aliases for detail
+links. Ambiguous matches are omitted. Catalog lookups are paced and cached;
+the first language page can take longer while matching title IDs. Regional
+Abyss languages remain available inside the player, rather than being inferred
+from metadata that has no audio information.
+
+`/seasonal` uses the provider's `/seasons` archive for every available year and
+season, including older years and announced future seasons. Year, season, and
+page are saved in the URL. Each season is paginated rather than limited to the
+home page's top ten. Desktop and mobile navigation and the home season section
+link to the archive. Unlisted seasons are disabled and failed requests are
+retryable.

@@ -85,6 +85,10 @@ main > .catalog-loading { width:90%; }
 .season-tabs button { display:flex; align-items:center; justify-content:center; gap:9px; min-height:46px; padding:12px 20px; border:1px solid #ffffff18; background:#211a20; color:#bfb0b8; border-radius:12px; transition:background .2s,color .2s,transform .2s; }
 .season-tabs button[aria-pressed=true] { background:#b30f3c; color:#fff; border-color:#e04872; box-shadow:0 4px 20px #b30f3c22; }
 .season-tabs button:hover { transform:translateY(-2px); color:white; }
+.season-tabs button:disabled { opacity:.35; cursor:not-allowed; transform:none; }
+.season-year-control { width:min(100%,240px); margin-top:28px; }
+.season-year-control label { display:grid; gap:8px; color:#bfb0b8; font-size:12px; }
+.seasonal-page > h2 { margin-bottom:22px; }
 .season-tabs button[aria-pressed=true] svg { animation:icon-pop .35s ease-out; }
 .season-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:26px 20px; }
 .season-card { min-width:0; position:relative; }

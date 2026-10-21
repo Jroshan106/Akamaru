@@ -11,7 +11,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
   router.get('*', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const seasonal = /^\/seasons\/[12]\d{3}\/(winter|spring|summer|fall)$/.test(req.path);
-    if (!seasonal && !/^\/(top\/anime|genres\/anime|anime(?:\/[1-9]\d*(?:\/relations)?)?)$/.test(req.path)) {
+    if (!seasonal && !/^\/(seasons|top\/anime|genres\/anime|anime(?:\/[1-9]\d*(?:\/relations)?)?)$/.test(req.path)) {
       res.status(404).json({ error: 'Catalog endpoint not found' }); return;
     }
     const query = new URLSearchParams();

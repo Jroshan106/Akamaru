@@ -77,7 +77,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         let count = 0;
         let next = false;
         const detailId = catalogPath.match(/^\/(?:anime|watch)\/([^/]+)/)?.[1];
-        if (catalogPath === '/history') {
+        if (catalogPath === '/history' || catalogPath === '/seasonal') {
           // Watch history does not depend on the online catalog.
           items = [];
         } else if (detailId) {
@@ -141,7 +141,18 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             setGenres(response.data);
             path = searchPath(new URLSearchParams(search), response.data);
           }
-          const response = await jikanRequest<JikanResult>(path);
+          const filters = new URLSearchParams(search);
+          let response: JikanResult;
+          if (catalogPath === '/browse' && filters.get('language')) {
+            const query = new URLSearchParams();
+            for (const key of ['language', 'search', 'genre', 'sort', 'page']) {
+              if (filters.get(key)) query.set(key, filters.get(key)!);
+            }
+            const result = await fetch(`/api/language-catalog?${query}`);
+            const body = await result.json();
+            if (!result.ok) throw new Error(body.error || 'Language catalog could not load.');
+            response = body;
+          } else response = await jikanRequest<JikanResult>(path);
           items = [
             ...new Map(
               response.data.map((a) => [a.mal_id, normalizeAnime(a)]),

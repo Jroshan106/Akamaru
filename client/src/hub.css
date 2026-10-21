@@ -42,7 +42,7 @@
 @media(max-width:1000px) { .aligned-watch-layout > aside { grid-column:1; grid-row:3; } }
 @media(max-width:1000px) { .provider-page .watch-layout { grid-template-columns:minmax(0,1fr); } .provider-page .provider-episodes { max-height:420px; } }
 @media(max-width:720px) {
- .mobile-navigation { grid-template-columns:repeat(4,1fr); }
+ .mobile-navigation { grid-template-columns:repeat(5,1fr); }
  .hub-page { padding-top:24px; }
  .hub-heading { align-items:flex-start; flex-direction:column; gap:16px; }
  .local-picker { flex-direction:column; align-items:flex-start; padding:22px; }

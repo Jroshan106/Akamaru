@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Snowflake, Flower2, Sun, Leaf } from 'lucide-react';
 import { jikanRequest, normalizeAnime, type JikanResult } from '../lib/jikan';
 import { useCatalog } from '../lib/catalog';
@@ -30,7 +31,7 @@ export default function SeasonalAnime() {
     return () => { cancelled = true; };
   }, [year, season, retry, remember]);
   return <section className="catalog-section seasonal-section" aria-labelledby="season-heading">
-    <div className="section-heading"><div><span className="eyebrow">THE SEASON’S STANDOUTS · {year}</span><h2 id="season-heading">{seasons[season].name} top 10<span className="accent">.</span></h2></div><span className="muted">Highest rated · MyAnimeList scores</span></div>
+    <div className="section-heading"><div><span className="eyebrow">THE SEASON’S STANDOUTS · {year}</span><h2 id="season-heading">{seasons[season].name} top 10<span className="accent">.</span></h2></div><Link to={`/seasonal?year=${year}&season=${seasons[season].name.toLowerCase()}`}>Browse all seasons →</Link></div>
     <div className="season-tabs" aria-label="Choose anime season">{seasons.map(({name, icon: Icon}, index) => <button type="button" key={name} aria-pressed={season === index} onClick={() => setSeason(index)}><Icon size={18}/>{name}</button>)}</div>
     {loading ? <><LoadingIndicator>Loading {seasons[season].name.toLowerCase()} anime…</LoadingIndicator><div className="season-grid" aria-hidden="true">{Array.from({length:5},(_, i) => <div className="skeleton skeleton-cover" key={i}/>)}</div></> : error ? <div className="source-note" role="alert"><p>{error}</p><button className="button secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div> : items.length ? <div className="season-grid">{items.map((item,index) => <div className="season-card" key={`${season}-${item.id}`}><span className="season-rank">#{index + 1}</span><AnimeCard anime={item}/></div>)}</div> : <p className="source-note">No anime are listed for this season yet.</p>}
   </section>;

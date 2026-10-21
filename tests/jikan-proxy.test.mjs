@@ -71,6 +71,19 @@ test('season rankings use the fixed catalog host and enforce safe limits', async
   });
 });
 
+test('season archive and older seasonal pages remain available with pagination', async () => {
+  await withProxy(async url => {
+    const target = new URL(url);
+    if (target.pathname === '/v1/seasons') return Response.json({ data: [{ year: 1963, seasons: ['winter'] }] });
+    assert.equal(target.pathname, '/v1/seasons/1963/winter');
+    assert.equal(target.searchParams.get('page'), '2');
+    return Response.json({ data: [], pagination: { has_next_page: false } });
+  }, async base => {
+    assert.equal((await (await fetch(`${base}/seasons`)).json()).data[0].year, 1963);
+    assert.equal((await fetch(`${base}/seasons/1963/winter?page=2`)).status, 200);
+  });
+});
+
 test('Vercel rewrite captures do not reject valid requests or reach Jikan', async () => {
   const targets = [];
   await withProxy(async url => {
