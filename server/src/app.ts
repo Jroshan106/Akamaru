@@ -7,6 +7,7 @@ import nexusRoutes from './routes/nexus';
 import animelokRoutes from './routes/animelok';
 import anikotoRoutes from './routes/anikoto';
 import languageCatalogRoutes from './routes/languageCatalog';
+import { createAuth } from './routes/auth';
 
 const app = express();
 
@@ -17,7 +18,11 @@ app.use(
     methods: ["GET"],
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
+const auth = createAuth();
+app.use('/api/auth', auth.router);
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.use('/api', auth.requireSession);
 
 // Routes
 app.use("/api/anime", animeRoutes);
@@ -27,11 +32,6 @@ app.use('/api/nexus', nexusRoutes);
 app.use('/api/animelok', animelokRoutes);
 app.use('/api/anikoto', anikotoRoutes);
 app.use('/api/language-catalog', languageCatalogRoutes);
-
-// Health check
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });

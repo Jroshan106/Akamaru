@@ -37,7 +37,7 @@ test('proxy forwards full query to fixed host and caches identical requests', as
       assert.equal((await response.json()).data[0].mal_id, 21);
     }
     const cached = await fetch(`${base}/anime?page=2&q=one%20piece`);
-    assert.match(cached.headers.get('cache-control'), /s-maxage=300/);
+    assert.equal(cached.headers.get('cache-control'), 'private, no-store');
     assert.equal(calls, 1);
   });
 });

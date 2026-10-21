@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import AuthGate from './components/AuthGate';
 import "./index.css";
 import "./mobile.css";
 import "./hub.css";
@@ -10,7 +11,7 @@ import "./motion.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthGate><App /></AuthGate>
     </BrowserRouter>
   </React.StrictMode>,
 );

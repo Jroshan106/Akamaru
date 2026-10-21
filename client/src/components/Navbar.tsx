@@ -1,8 +1,12 @@
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Search, Bookmark, House, Compass, History, CalendarDays } from "lucide-react";
+import { Search, Bookmark, House, Compass, History, CalendarDays, LogOut } from "lucide-react";
+import { useAuth } from './AuthGate';
 import { FormEvent, useState } from "react";
 export default function Navbar() {
   const [query, setQuery] = useState("");
+  const { logout } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const navigate = useNavigate();
   const isBrowse = useLocation().pathname.replace(/\/$/, "") === "/browse";
   function search(event: FormEvent) {
@@ -38,6 +42,11 @@ export default function Navbar() {
         </button>
       </form>}
       {!isBrowse && <Link className="mobile-search" to="/browse" aria-label="Search anime"><Search size={21} /></Link>}
+      <button className="auth-signout" aria-label="Sign out" title="Sign out" disabled={signingOut} onClick={async () => {
+        setSigningOut(true); setLogoutError('');
+        try { await logout(); } catch { setLogoutError('Could not sign out. Please try again.'); } finally { setSigningOut(false); }
+      }}><LogOut size={18}/></button>
+      {logoutError && <p className="auth-signout-error" role="alert">{logoutError}</p>}
     </header>
     <nav className="mobile-navigation" aria-label="Mobile navigation">
       <NavLink to="/" end><House size={21} /><span>Discover</span></NavLink>

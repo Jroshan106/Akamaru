@@ -70,6 +70,27 @@ Run `npm run build` and `npm test` before deploying. Push the changes and redepl
 
 MIT
 
+## Private single-account login
+
+The whole app requires the one account configured by `AUTH_USERNAME`,
+`AUTH_PASSWORD`, and `AUTH_SESSION_SECRET`. The generated local account is in
+the root `.env.local` file. It is ignored by Git and must never be committed or
+given a `VITE_` prefix. Local development and the standalone server load this
+file automatically. Restart the server after changing it.
+
+Sessions last 12 hours in signed HttpOnly, SameSite=Strict cookies, with Secure
+enabled on HTTPS. Sign out clears the session cookie and closes the app in other
+open tabs. Changing either credential or the signing key invalidates existing
+sessions. Failed logins are limited to ten per ten minutes per address within
+each running server instance. The API is independently protected; only health
+and authentication endpoints are public. Protected responses use private,
+no-store caching. Missing or invalid configuration blocks access.
+
+For Cloudflare, add the three `AUTH_*` values as Worker secrets in the dashboard,
+then deploy the latest code. For Vercel, set them as server environment variables
+and redeploy. `.env.local` supplies local development values, not production
+deployment secrets. There is no registration or public password reset.
+
 ## Cloudflare Workers deployment
 
 Deploy from the repository root with build command `npm run build` and deploy

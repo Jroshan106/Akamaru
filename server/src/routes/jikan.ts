@@ -38,7 +38,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
     const key = `${req.path}?${query}`;
     const cached = cache.get(key);
     if (cached && cached.expires > Date.now()) {
-      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+      res.setHeader('Cache-Control', 'private, no-store');
       res.json(cached.body); return;
     }
     let request = pending.get(key);
@@ -69,7 +69,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
       void request.finally(() => pending.delete(key));
     }
     const result = await request;
-    if (result.status === 200) res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+    if (result.status === 200) res.setHeader('Cache-Control', 'private, no-store');
     if (result.status === 429) res.setHeader('Retry-After', '60');
     res.status(result.status).json(result.body);
   });

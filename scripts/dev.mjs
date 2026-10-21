@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const localEnv = fileURLToPath(new URL('../.env.local', import.meta.url));
+if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 const require = createRequire(import.meta.url);
 const children = [
   spawn(
