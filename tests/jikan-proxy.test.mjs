@@ -6,18 +6,28 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { createJikanRouter } = require('../server/dist/routes/jikan.js');
 
-async function withProxy(fetcher, run, timeout = 1000, injectRoutingParameters = false) {
+async function withProxy(fetcher, run, timeout = 1000, injectRoutingParameters = false, now = Date.now) {
   const app = express();
   if (injectRoutingParameters) app.use((req, _res, next) => {
     req.query.path = req.path.replace(/^\/api\//, '');
     next();
   });
-  app.use('/api/jikan', createJikanRouter(fetcher, 0, timeout));
+  app.use('/api/jikan', createJikanRouter(fetcher, 0, timeout, now));
   const server = createServer(app);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try { await run(`http://127.0.0.1:${server.address().port}/api/jikan`); }
   finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
+
+test('native Explore type and inclusive release date filters reach the catalog', async () => {
+  await withProxy(async value => {
+    const url = new URL(value);
+    assert.equal(url.searchParams.get('type'), 'movie');
+    assert.equal(url.searchParams.get('start_date'), '2026-10-01');
+    assert.equal(url.searchParams.get('end_date'), '2026-12-31');
+    return Response.json({ data: [] });
+  }, async base => assert.equal((await fetch(`${base}/anime?type=movie&start_date=2026-10-01&end_date=2026-12-31`)).status, 200));
+});
 
 test('proxy forwards full query to fixed host and caches identical requests', async () => {
   let calls = 0;
@@ -110,8 +120,49 @@ test('upstream rate limits remain retryable and are never cached', async () => {
     assert.equal(response.status, 429);
     assert.equal(response.headers.get('retry-after'), '60');
     assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(calls, 1, 'Do not automatically retry provider rate limits');
     assert.equal((await fetch(`${base}/top/anime`)).status, 200);
   });
+});
+
+test('seasonal and upcoming requests recover from transient provider failures', async () => {
+  for (const path of ['/seasons/2026/fall?limit=10&order_by=score&sort=desc', '/anime?status=upcoming&order_by=members&limit=12']) {
+    let calls = 0;
+    await withProxy(async () => {
+      if (++calls === 1) throw new Error('Temporary connection reset');
+      return Response.json({ data: [{ mal_id: 21 }] });
+    }, async base => {
+      const response = await fetch(base + path);
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).data[0].mal_id, 21);
+      assert.equal(calls, 2);
+    });
+  }
+});
+
+test('brief outages reuse only recent successful data for the same catalog query', async () => {
+  let clock = Date.now(), failing = false;
+  await withProxy(async () => failing ? new Response('', { status: 503 }) : Response.json({ data: [{ mal_id: 21 }] }), async base => {
+    const path = '/seasons/2026/fall?limit=10';
+    assert.equal((await fetch(base + path)).status, 200);
+    clock += 6 * 60000; failing = true;
+    const stale = await fetch(base + path);
+    assert.equal(stale.status, 200);
+    assert.equal((await stale.json()).data[0].mal_id, 21);
+    assert.equal((await fetch(base + '/seasons/2026/summer?limit=10')).status, 502);
+    clock += 24 * 60 * 60000;
+    assert.equal((await fetch(base + path)).status, 502, 'Expired results cannot mask a prolonged outage');
+  }, 1000, false, () => clock);
+});
+
+test('client errors do not trigger retries or reuse cached results', async () => {
+  let clock = Date.now(), calls = 0;
+  await withProxy(async () => ++calls === 1 ? Response.json({ data: [] }) : new Response('', { status: 404 }), async base => {
+    assert.equal((await fetch(base + '/anime/1')).status, 200);
+    clock += 6 * 60000;
+    assert.equal((await fetch(base + '/anime/1')).status, 404);
+    assert.equal(calls, 2);
+  }, 1000, false, () => clock);
 });
 test('upstream timeout returns a useful 502 instead of hanging', async () => {
   await withProxy((_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('timeout')))), async base => {

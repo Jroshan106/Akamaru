@@ -57,3 +57,28 @@ test('language catalog rejects invalid queries, ambiguous seasons and upstream r
     assert.equal(response.status, 502); assert.doesNotMatch(await response.text(), /private data|evil\.test/);
   });
 });
+
+test('native discovery forwards year, season, type, status and updated sort using provider form values', async () => {
+  const form = html + '<label><input name="year[]" value="2026">2026</label><label><input name="season[]" value="fall">Fall</label><label><input name="term_type[]" value="TV">TV</label><label><input name="status[]" value="currently-airing">Currently Airing</label>';
+  let providerCalls = 0;
+  await withRouter(async value => {
+    const url = new URL(value);
+    if (url.hostname === 'anikototv.to') {
+      providerCalls++;
+      assert.equal(url.searchParams.get('sort'), 'latest-updated');
+      if (providerCalls === 2) {
+        assert.equal(url.searchParams.get('year[]'), '2026');
+        assert.equal(url.searchParams.get('season[]'), 'fall');
+        assert.equal(url.searchParams.get('term_type[]'), 'TV');
+        assert.equal(url.searchParams.get('status[]'), 'currently-airing');
+      }
+      return new Response(form);
+    }
+    return Response.json({ data: [{ mal_id: 52991, title: 'Sousou no Frieren' }] });
+  }, async base => {
+    const response = await fetch(`${base}?language=sub&year=2026&season=fall&type=tv&status=airing&sort=updated`);
+    assert.equal(response.status, 200); assert.equal((await response.json()).data[0].mal_id, 52991);
+    assert.equal(providerCalls, 2);
+    for (const extra of ['year=bad','season=bad','type=bad','status=bad']) assert.equal((await fetch(`${base}?language=sub&${extra}`)).status, 400);
+  });
+});

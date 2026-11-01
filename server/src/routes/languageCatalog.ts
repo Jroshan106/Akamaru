@@ -22,17 +22,21 @@ export function createLanguageCatalogRouter(fetcher: typeof fetch = fetch, spaci
   }
   router.get('/', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    const { language, genre = '', search = '', sort = 'rating', page = '1' } = req.query;
+    const { language, genre = '', search = '', sort = 'rating', page = '1', year = '', season = '', type = '', status = '' } = req.query;
     if (!['sub', 'dub'].includes(String(language)) || typeof language !== 'string' ||
       typeof genre !== 'string' || genre.length > 80 || typeof search !== 'string' || search.length > 180 ||
-      typeof sort !== 'string' || !['rating', 'year', 'title'].includes(sort) ||
+      typeof sort !== 'string' || !['rating', 'year', 'title', 'popular', 'updated'].includes(sort) ||
+      typeof year !== 'string' || (year !== '' && !/^[12]\d{3}$/.test(year)) ||
+      typeof season !== 'string' || !['', 'winter', 'spring', 'summer', 'fall'].includes(season) ||
+      typeof type !== 'string' || !['', 'tv', 'movie', 'ova', 'ona'].includes(type) ||
+      typeof status !== 'string' || !['', 'airing', 'complete'].includes(status) ||
       typeof page !== 'string' || !/^[1-9]\d{0,3}$/.test(page)) {
       res.status(400).json({ error: 'Choose a valid language and catalog filters.' }); return;
     }
     const query = new URLSearchParams({ 'language[]': language, keyword: search, page,
-      sort: sort === 'title' ? 'name-az' : sort === 'year' ? 'release-date' : 'score',
+      sort: sort === 'title' ? 'name-az' : sort === 'year' ? 'release-date' : sort === 'popular' ? 'most-viewed' : sort === 'updated' ? 'latest-updated' : 'score',
       direction: sort === 'title' ? 'asc' : 'desc' });
-    const key = `${query}&genre=${encodeURIComponent(genre)}`;
+    const key = `${query}&genre=${encodeURIComponent(genre)}&year=${year}&season=${season}&type=${type}&status=${status}`;
     const cached = cache.get(key);
     if (cached && cached.until > Date.now()) { res.json(cached.body); return; }
     try {
@@ -42,11 +46,19 @@ export function createLanguageCatalogRouter(fetcher: typeof fetch = fetch, spaci
         work = (async () => {
           let html = await (await request(`https://anikototv.to/filter?${query}`)).text();
           if (html.length > 2_000_000) throw new Error('Unexpected language catalog response.');
-          if (genre) {
+          if (genre || year || season || type || status) {
             const $ = load(html);
-            const field = $('input[name="genre[]"]').toArray().find(el => $(el).parent().text().trim().toLowerCase() === genre.toLowerCase());
-            if (!field) return { data: [], pagination: { has_next_page: false } };
-            query.set('genre[]', $(field).attr('value') || '');
+            const requested = [
+              { names: ['genre[]'], label: genre }, { names: ['year[]'], label: year },
+              { names: ['season[]'], label: season }, { names: ['term_type[]', 'type', 'type[]'], label: type },
+              { names: ['status', 'status[]'], label: status === 'airing' ? 'Currently Airing' : status === 'complete' ? 'Finished Airing' : '' },
+            ];
+            for (const filter of requested) {
+              if (!filter.label) continue;
+              const field = $('input[name]').toArray().find(el => filter.names.includes($(el).attr('name') || '') && normalizeTitle($(el).parent().text().trim()) === normalizeTitle(filter.label));
+              if (!field) return { data: [], pagination: { has_next_page: false } };
+              query.set($(field).attr('name')!, $(field).attr('value') || '');
+            }
             html = await (await request(`https://anikototv.to/filter?${query}`)).text();
           }
           const $ = load(html);

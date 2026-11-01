@@ -2,12 +2,12 @@ import { Router } from 'express';
 
 // Only the catalog endpoints used by the app may be forwarded.
 // The upstream host is fixed; this is not an arbitrary URL proxy.
-export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 1050, timeoutMs = 8000) {
+export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 1050, timeoutMs = 8000, now = Date.now) {
   const router = Router();
-  const cache = new Map<string, { body: unknown; expires: number }>();
+  const cache = new Map<string, { body: unknown; expires: number; staleUntil: number }>();
   const pending = new Map<string, Promise<{ status: number; body: unknown }>>();
   let nextStart = 0;
-  const allowedQuery = new Set(['q', 'page', 'limit', 'genres', 'status', 'order_by', 'sort', 'sfw']);
+  const allowedQuery = new Set(['q', 'page', 'limit', 'genres', 'status', 'type', 'start_date', 'end_date', 'order_by', 'sort', 'sfw']);
   router.get('*', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const seasonal = /^\/seasons\/[12]\d{3}\/(winter|spring|summer|fall)$/.test(req.path);
@@ -37,7 +37,7 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
     query.sort();
     const key = `${req.path}?${query}`;
     const cached = cache.get(key);
-    if (cached && cached.expires > Date.now()) {
+    if (cached && cached.expires > now()) {
       res.setHeader('Cache-Control', 'private, no-store');
       res.json(cached.body); return;
     }
@@ -48,22 +48,41 @@ export function createJikanRouter(fetcher: typeof fetch = fetch, spacingMs = 105
       nextStart = Date.now() + wait + spacingMs;
       request = (async () => {
         await new Promise(resolve => setTimeout(resolve, wait));
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          const response = await fetcher(`https://api.tenrai.org/v1${key}`, { signal: controller.signal, headers: { Accept: 'application/json' } });
-          if (!response.ok) {
-            const status = [400, 404, 429].includes(response.status) ? response.status : 502;
-            return { status, body: { error: status === 429 ? 'The anime provider is busy. Please wait a minute, then try again.' : 'The anime provider could not load this catalog request. Please try again.' } };
+        const fetchOnce = async () => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          try {
+            const response = await fetcher(`https://api.tenrai.org/v1${key}`, { signal: controller.signal, headers: { Accept: 'application/json' } });
+            if (!response.ok) {
+              const status = [400, 404, 429].includes(response.status) ? response.status : 502;
+              return { status, body: { error: status === 429 ? 'The anime provider is busy. Please wait a minute, then try again.' : 'The anime provider could not load this catalog request. Please try again.' } };
+            }
+            const body = await response.json();
+            if (!body || typeof body !== 'object' || !('data' in body)) throw new Error('Invalid upstream response');
+            if (cache.size >= 100) cache.delete(cache.keys().next().value!);
+            cache.set(key, { body, expires: now() + 300000, staleUntil: now() + 86400000 });
+            return { status: 200, body };
+          } catch {
+            return { status: 502, body: { error: 'The server cannot reach the anime provider right now. Please try again shortly.' } };
+          } finally { clearTimeout(timer); }
+        };
+        let result = await fetchOnce();
+        if (result.status === 502) {
+          // One recovery attempt, through the shared limiter. A busy queue must
+          // not extend requests beyond the browser/serverless time budgets.
+          const retryWait = Math.max(0, nextStart - Date.now());
+          if (retryWait <= spacingMs) {
+            nextStart = Date.now() + retryWait + spacingMs;
+            await new Promise(resolve => setTimeout(resolve, retryWait));
+            result = await fetchOnce();
           }
-          const body = await response.json();
-          if (!body || typeof body !== 'object' || !('data' in body)) throw new Error('Invalid upstream response');
-          if (cache.size >= 100) cache.delete(cache.keys().next().value!);
-          cache.set(key, { body, expires: Date.now() + 300000 });
-          return { status: 200, body };
-        } catch {
-          return { status: 502, body: { error: 'The server cannot reach the anime provider right now. Please try again shortly.' } };
-        } finally { clearTimeout(timer); }
+        }
+        // Only previously successful data, for this exact query, can bridge a
+        // short outage. Validation errors and missing titles stay visible.
+        if ((result.status >= 500 || result.status === 429) && cached && cached.staleUntil > now()) {
+          return { status: 200, body: cached.body };
+        }
+        return result;
       })();
       pending.set(key, request);
       void request.finally(() => pending.delete(key));

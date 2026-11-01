@@ -62,6 +62,8 @@ The frontend loads anime through the same-origin `/api/jikan/*` proxy. The serve
 
 Requests are queued at least 1.05 seconds apart per browser session, identical requests are deduplicated, successful responses are cached for five minutes, and search is debounced. Network failures and upstream rate limits show a retry message. Watchlist snapshots are stored locally so saved titles remain visible across catalog pages and reloads. Legacy saved IDs are migrated to MyAnimeList IDs.
 
+The server retries a temporary provider/network failure once when its shared request queue has room. It does not automatically retry rate limits or invalid requests. During provider failures, the same exact query may reuse a previously successful response for up to 24 hours; this fallback is held in the current server instance's bounded memory cache. Cold instances and prolonged outages still show the retry message.
+
 Tenrai provides metadata and available YouTube trailers, not full anime episode streams. Titles without trailers show an explicit unavailable state and link to MyAnimeList. Catalog availability depends on Tenrai and the user's network.
 
 Run `npm run build` and `npm test` before deploying. Push the changes and redeploy Vercel to update the live site.
@@ -70,9 +72,26 @@ Run `npm run build` and `npm test` before deploying. Push the changes and redepl
 
 MIT
 
+## Android app
+
+The native Android project is in [`android-app`](android-app/README.md). It is
+standalone: no website account, JSON backend or server configuration is
+required. Discovery and episodes use the built-in Anikoto source; AniList adds
+metadata and artwork. The app includes a custom native Media3 player and a
+device-local watchlist, progress and settings. See its README for builds and testing.
+
+## Windows app
+
+The native Windows app is in [`windows-app`](windows-app/README.md). It uses WPF
+and native LibVLC playback, with the same built-in Aniyomi-style Anikoto source
+approach as the Android app. Its library, progress and profile stay on the
+computer. Run `windows-release/Akamaru.exe` from the self-contained release
+folder. It does not use the website login or API. The earlier Electron
+prototype remains in `desktop-app` for reference.
+
 ## Private single-account login
 
-The whole app requires the one account configured by `AUTH_USERNAME`,
+The website requires the one account configured by `AUTH_USERNAME`,
 `AUTH_PASSWORD`, and `AUTH_SESSION_SECRET`. The generated local account is in
 the root `.env.local` file. It is ignored by Git and must never be committed or
 given a `VITE_` prefix. Local development and the standalone server load this

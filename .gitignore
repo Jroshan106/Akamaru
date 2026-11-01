@@ -10,3 +10,11 @@ dist/
 *.tsbuildinfo
 preview.png
 .wrangler/
+desktop-release/
+.dotnet/
+windows-app/bin/
+windows-app/obj/
+windows-release/
+windows-app/
+desktop-app/
+android-app/
