@@ -82,7 +82,34 @@ const cache = new Map<string, { value: unknown; expires: number }>();
 const pending = new Map<string, Promise<unknown>>();
 let queue = Promise.resolve();
 let lastStart = 0;
+let serverUnavailableUntil = 0;
+let providerBlockedUntil = 0;
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function retryDelay(response: Response): number {
+  const header = response.headers.get('Retry-After');
+  const seconds = header && /^\d+$/.test(header) ? Number(header) : NaN;
+  const date = header ? Date.parse(header) : NaN;
+  return Number.isFinite(seconds) ? Math.max(1000, seconds * 1000)
+    : Number.isFinite(date) ? Math.max(1000, date - Date.now()) : 60000;
+}
+function publicCatalogUrl(path: string): string {
+  const url = new URL(`https://api.tenrai.org/v1${path}`);
+  const route = url.pathname.slice(3);
+  if (!/^\/(seasons(?:\/[12]\d{3}\/(winter|spring|summer|fall))?|top\/anime|genres\/anime|anime(?:\/[1-9]\d*(?:\/relations)?)?)$/.test(route))
+    throw new JikanError('Unsupported catalog request.', 400);
+  if (route === '/anime' || route === '/top/anime' || /^\/seasons\//.test(route)) url.searchParams.set('sfw', 'true');
+  return url.href;
+}
+async function fetchCatalog(url: string, direct = false): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), direct ? 12000 : 25000);
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      ...(direct ? { credentials: 'omit' as const, referrerPolicy: 'no-referrer' as const, redirect: 'error' as const } : {}),
+    });
+  } finally { clearTimeout(timeout); }
+}
 export class JikanError extends Error {
   constructor(
     message: string,
@@ -100,12 +127,21 @@ export function jikanRequest<T>(path: string): Promise<T> {
   const task = queue.then(async () => {
     await pause(Math.max(0, 1050 - (Date.now() - lastStart)));
     lastStart = Date.now();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetch(`/api/jikan${path}`, {
-        signal: controller.signal,
-      });
+      if (providerBlockedUntil > Date.now())
+        throw new JikanError(`The anime provider is busy. Please wait ${Math.ceil((providerBlockedUntil - Date.now()) / 1000)} seconds, then try again.`, 429);
+      let response: Response;
+      if (serverUnavailableUntil > Date.now()) {
+        response = await fetchCatalog(publicCatalogUrl(path), true);
+      } else {
+        try { response = await fetchCatalog(`/api/jikan${path}`); }
+        catch { serverUnavailableUntil = Date.now() + 60000; response = await fetchCatalog(publicCatalogUrl(path), true); }
+        if ([429, 502, 503, 504].includes(response.status) && serverUnavailableUntil <= Date.now()) {
+          serverUnavailableUntil = Date.now() + (response.status === 429 ? retryDelay(response) : 60000);
+          response = await fetchCatalog(publicCatalogUrl(path), true);
+        }
+      }
+      if (response.status === 429) providerBlockedUntil = Date.now() + retryDelay(response);
       if (!response.ok)
         throw new JikanError(
           response.status === 429
@@ -116,7 +152,7 @@ export function jikanRequest<T>(path: string): Promise<T> {
           response.status,
         );
       const value = await response.json();
-      if (!value || !("data" in value))
+      if (!value || typeof value !== 'object' || !("data" in value))
         throw new JikanError(
           "The catalog returned an unexpected response. Please try again.",
         );
@@ -128,8 +164,6 @@ export function jikanRequest<T>(path: string): Promise<T> {
       throw new JikanError(
         "Could not reach the catalog server. Please try again.",
       );
-    } finally {
-      clearTimeout(timeout);
     }
   });
   queue = task.then(

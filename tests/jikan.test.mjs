@@ -72,7 +72,7 @@ test("search, genre, status, sort, and page become upstream query parameters", (
     "1",
   );
 });
-test("requests deduplicate, cache successes, and allow retry after rate limits", async () => {
+test("requests deduplicate and cache successes", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async (url) => {
@@ -87,14 +87,65 @@ test("requests deduplicate, cache successes, and allow retry after rate limits",
     ]);
     await jikanRequest("/test-cache");
     assert.equal(calls, 1);
-    globalThis.fetch = async () => new Response("", { status: 429 });
-    await assert.rejects(
-      jikanRequest("/test-retry"),
-      (error) => error.status === 429 && /wait a minute/.test(error.message),
-    );
-    globalThis.fetch = async () => Response.json({ data: [{ mal_id: 1 }] });
-    assert.equal((await jikanRequest("/test-retry")).data[0].mal_id, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+let instance = 0;
+async function isolatedCatalog() {
+  return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}#instance-${++instance}`);
+}
+test('Cloudflare rate limits and outages recover through the public CORS catalog', async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const status of [429, 502, 503, 504, 0]) {
+      const { jikanRequest: request } = await isolatedCatalog();
+      const calls = [];
+      globalThis.fetch = async (url, options) => {
+        calls.push(url);
+        if (url.startsWith('/api/')) {
+          if (!status) throw new TypeError('Network failure');
+          return new Response('', { status, headers: { 'Retry-After': '60' } });
+        }
+        const target = new URL(url);
+        assert.equal(target.origin, 'https://api.tenrai.org');
+        assert.equal(options.credentials, 'omit');
+        assert.equal(options.referrerPolicy, 'no-referrer');
+        assert.equal(options.redirect, 'error');
+        assert.equal(options.headers, undefined, 'No session headers or server keys go to the public API');
+        assert.equal(target.searchParams.get('sfw'), 'true');
+        return Response.json({ data: [{ mal_id: 21 }] });
+      };
+      const path = '/top/anime?limit=10&sfw=false';
+      const results = await Promise.all([request(path), request(path)]);
+      assert.equal(results[0].data[0].mal_id, 21);assert.equal(calls.length, 2);
+      await request(path);assert.equal(calls.length, 2, 'Fallback successes share the existing cache');
+      await request('/seasons/2026/fall?limit=10');
+      assert.equal(calls.length, 3);assert.match(calls[2], /^https:\/\/api.tenrai.org\/v1\/seasons\/2026\/fall/);
+    }
+  } finally { globalThis.fetch = original; }
+});
+test('authentication failures and invalid requests never trigger a public fallback', async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const status of [400, 401, 403, 404]) {
+      const { jikanRequest: request } = await isolatedCatalog();let calls = 0;
+      globalThis.fetch = async url => { calls++;assert.match(url, /^\/api\/jikan\//);return new Response('', { status }); };
+      await assert.rejects(request('/anime/21'), error => error.status === status);assert.equal(calls, 1);
+    }
+  } finally { globalThis.fetch = original; }
+});
+test('a visitor rate limit respects Retry-After across all catalog sections', async () => {
+  const original = globalThis.fetch, originalNow = Date.now;let clock = originalNow();
+  try {
+    Date.now = () => clock;
+    const { jikanRequest: request } = await isolatedCatalog();let calls = 0;
+    globalThis.fetch = async () => { calls++;return new Response('', { status: 429, headers: { 'Retry-After': '60' } }); };
+    await assert.rejects(request('/top/anime'), error => error.status === 429);assert.equal(calls, 2);
+    await assert.rejects(request('/seasons/2026/fall'), error => error.status === 429);assert.equal(calls, 2, 'Other sections must not retry inside the same provider limit window');
+    clock += 61000;
+    globalThis.fetch = async () => { calls++;return Response.json({ data: [{ mal_id: 21 }] }); };
+    assert.equal((await request('/seasons/2026/fall')).data[0].mal_id, 21);assert.equal(calls, 3);
+  } finally { globalThis.fetch = original;Date.now = originalNow; }
 });

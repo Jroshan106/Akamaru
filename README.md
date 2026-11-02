@@ -64,6 +64,8 @@ Requests are queued at least 1.05 seconds apart per browser session, identical r
 
 The server retries a temporary provider/network failure once when its shared request queue has room. It does not automatically retry rate limits or invalid requests. During provider failures, the same exact query may reuse a previously successful response for up to 24 hours; this fallback is held in the current server instance's bounded memory cache. Cold instances and prolonged outages still show the retry message.
 
+If the same-origin catalog returns 429, 502, 503 or 504, or cannot be reached, the browser can retrieve public metadata from Tenrai's CORS-enabled API. This avoids making every visitor depend on the hosting platform's shared outbound IP allowance. Browser requests omit credentials and referrers, use only the fixed catalog host/endpoints, enforce SFW for listings, and retain the normal queue, deduplication and cache. Authentication/validation errors never trigger this recovery. A server cooldown avoids repeatedly contacting its limited route, and a visitor's own provider 429 pauses all catalog sections for Retry-After (60 seconds if unavailable). No server key or site session is sent to Tenrai.
+
 Tenrai provides metadata and available YouTube trailers, not full anime episode streams. Titles without trailers show an explicit unavailable state and link to MyAnimeList. Catalog availability depends on Tenrai and the user's network.
 
 Run `npm run build` and `npm test` before deploying. Push the changes and redeploy Vercel to update the live site.
