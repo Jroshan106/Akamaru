@@ -31,7 +31,10 @@ test('Workers-compatible provider requests reject redirects without following or
       const before = calls.length;
       const response = await fetch(base + path);
       assert.equal(response.status, 502);
-      assert.equal(calls.length, before + 1);
+      assert.equal(calls.length, before + (path.includes('/resolve/') ? 2 : 1));
+      if (path.includes('/resolve/')) {
+        assert.deepEqual(calls.slice(before), ['https://api.tenrai.org/v1/anime/52991', 'https://api.ani.zip/mappings?mal_id=52991']);
+      }
       assert.equal(response.headers.get('location'), null);
       assert.doesNotMatch(await response.text(), /private redirect|untrusted\.test|Invalid redirect value/);
     }

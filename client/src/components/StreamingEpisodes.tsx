@@ -4,7 +4,7 @@ import type { Anime } from '../types';
 import BackChevron from './BackChevron';
 import { LoadingIndicator } from './CatalogUI';
 import ProviderPlayer from './ProviderPlayer';
-import { resolveEpisodePlayback, type EpisodePlayback, type PlaybackEpisode, type PlaybackProvider } from '../lib/episodePlayback';
+import { playbackEpisodeList, resolveEpisodePlayback, type EpisodePlayback, type PlaybackEpisode, type PlaybackProvider } from '../lib/episodePlayback';
 
 type Mapping = { malId: number; anilistId: number; episodes: { number: string; title: string }[] };
 export default function StreamingEpisodes({ anime, initialEpisode }: { anime: Anime; initialEpisode?: string }) {
@@ -32,7 +32,7 @@ export default function StreamingEpisodes({ anime, initialEpisode }: { anime: An
     }).catch(e => { if (!controller.signal.aborted) setError(e.message); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [anime.id, attempt]);
-  const episodes = mapping?.episodes.length ? mapping.episodes : providerEpisodes?.animeId === anime.id ? providerEpisodes.items : [];
+  const episodes = playbackEpisodeList(mapping?.episodes || [], providerEpisodes, anime.id, playback?.provider);
   const episode = initialEpisode || episodes[0]?.number || '1';
   const index = episodes.findIndex(e => e.number === episode);
   const canTry = /^[1-9]\d{0,4}$/.test(episode);

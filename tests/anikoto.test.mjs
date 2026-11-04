@@ -97,3 +97,59 @@ test('Anikoto language choice selects dub and rejects invalid language', async (
     assert.equal((await fetch(`${base}?language=other`)).status, 400);
   } finally { server.closeAllConnections(); await new Promise(r => server.close(r)); }
 });
+
+async function withResolver(fetcher, run) {
+  const app = express();app.use('/api', createAnikotoRouter(fetcher));
+  const server = app.listen(0, '127.0.0.1');await new Promise(r => server.once('listening', r));
+  try { await run(`http://127.0.0.1:${server.address().port}/api`); }
+  finally { server.closeAllConnections();await new Promise(r => server.close(r)); }
+}
+const steelResult = '<div class="ani items"><div class="item"><a class="name" data-jp="Steel Ball Run: JoJo no Kimyou na Bouken" href="/watch/steel-ball-run-rbdlc/ep-1">Steel Ball Run: JoJo’s Bizarre Adventure</a><a class="name" href="/watch/steel-ball-run-second-stage">Steel Ball Run: JoJo’s Bizarre Adventure 2nd Stage</a></div></div>';
+test('Steel Ball Run resolves through verified mapping titles when catalog lookup is limited', async () => {
+  let metadataCalls = 0;
+  await withResolver(async (url, options) => {
+    assert.equal(options.redirect, 'manual');
+    if (url.startsWith('https://api.tenrai.org/')) { metadataCalls++;return new Response('', { status: 429 }); }
+    if (url.startsWith('https://api.ani.zip/')) { metadataCalls++;return Response.json({ mappings: { mal_id: 61469 }, titles: { 'x-jat': 'Steel Ball Run: JoJo no Kimyou na Bouken', en: "Steel Ball Run: JoJo's Bizarre Adventure" } }); }
+    return new Response(steelResult);
+  }, async base => {
+    for (let i = 0; i < 2; i++) {
+      const response = await fetch(base + '/resolve/61469');assert.equal(response.status, 200);
+      const data = await response.json();assert.equal(data.malId, 61469);assert.equal(data.item.slug, 'steel-ball-run-rbdlc');
+    }
+    assert.equal(metadataCalls, 2, 'Subsequent episodes reuse the verified title lookup');
+  });
+});
+test('resolver does not accept aliases from mismatched or unavailable metadata', async () => {
+  for (const mappings of [{ mal_id: 999 }, undefined]) {
+    let searched = false;
+    await withResolver(async url => {
+      if (url.includes('api.tenrai.org')) return new Response('', { status: 503 });
+      if (url.includes('api.ani.zip')) return Response.json({ mappings, titles: { en: "Steel Ball Run: JoJo's Bizarre Adventure" } });
+      searched = true;return new Response(steelResult);
+    }, async base => { assert.equal((await fetch(base + '/resolve/61469')).status, 502);assert.equal(searched, false); });
+  }
+});
+test('failed metadata lookups can recover on retry instead of poisoning the cache', async () => {
+  let failing = true;
+  await withResolver(async url => {
+    if (url.includes('api.tenrai.org')) return failing ? new Response('', { status: 503 }) : Response.json({ data: { mal_id: 61469, title: 'Steel Ball Run: JoJo no Kimyou na Bouken' } });
+    if (url.includes('api.ani.zip')) return new Response('', { status: 503 });
+    return new Response(steelResult);
+  }, async base => {
+    assert.equal((await fetch(base + '/resolve/61469')).status, 502);failing = false;
+    assert.equal((await fetch(base + '/resolve/61469')).status, 200);
+  });
+});
+
+test('refresh invalidates both the title metadata and cached search results', async () => {
+  let updated = false, metadataCalls = 0;
+  await withResolver(async url => {
+    if (url.includes('api.tenrai.org')) { metadataCalls++;return Response.json({ data: { mal_id: 61469, title: 'Same title' } }); }
+    return new Response(`<div class="ani items"><div class="item"><a class="name" href="/watch/${updated ? 'new-result' : 'old-result'}">Same title</a></div></div>`);
+  }, async base => {
+    assert.equal((await (await fetch(base + '/resolve/61469')).json()).item.slug, 'old-result');updated = true;
+    assert.equal((await (await fetch(base + '/resolve/61469?refresh=1')).json()).item.slug, 'new-result');
+    assert.equal(metadataCalls, 2);
+  });
+});

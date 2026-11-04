@@ -43,6 +43,43 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
   const router = Router();
   const cache = new Map<string, { text: string; until: number }>();
   const pending = new Map<string, Promise<string>>();
+  const aliasCache = new Map<string, { aliases: string[]; until: number }>();
+  const aliasPending = new Map<string, Promise<string[]>>();
+  async function titleAliases(malId: string, refresh = false): Promise<string[]> {
+    const cached = aliasCache.get(malId);
+    if (!refresh && cached && cached.until > Date.now()) return cached.aliases;
+    const running = aliasPending.get(malId);
+    if (running) return running;
+    if (aliasPending.size >= 6) throw new Error('Anime title lookup is busy. Please retry shortly.');
+    const clean = (values: unknown[]) => [...new Set(values.filter((v): v is string => typeof v === 'string' && !!v.trim() && v.length <= 250).map(v => v.trim()))].slice(0, 12);
+    const work = (async () => {
+      let aliases: string[] = [];
+      try {
+        const response = await fetcher(`https://api.tenrai.org/v1/anime/${malId}`, { signal: AbortSignal.timeout(6000), redirect: 'manual', headers: { Accept: 'application/json' } });
+        if (response.ok) {
+          const { data } = await response.json() as { data?: { mal_id?: number; title?: unknown; title_english?: unknown; title_japanese?: unknown; title_synonyms?: unknown } };
+          if (data && (data.mal_id === undefined || data.mal_id === Number(malId))) {
+            aliases = clean([data.title, data.title_english, data.title_japanese, ...(Array.isArray(data.title_synonyms) ? data.title_synonyms : [])]);
+          }
+        }
+      } catch { /* Recover through an independently ID-verified metadata source. */ }
+      if (!aliases.length) {
+        try {
+          const response = await fetcher(`https://api.ani.zip/mappings?mal_id=${malId}`, { signal: AbortSignal.timeout(6000), redirect: 'manual', headers: { Accept: 'application/json' } });
+          if (response.ok) {
+            const data = await response.json() as { mappings?: { mal_id?: number }; titles?: Record<string, unknown> };
+            if (data?.mappings?.mal_id === Number(malId)) aliases = clean([data.titles?.['x-jat'], data.titles?.en, data.titles?.ja]);
+          }
+        } catch { /* A failed lookup is retryable and is never cached. */ }
+      }
+      if (!aliases.length) throw new Error('Anime title lookup is temporarily unavailable. Please retry.');
+      if (aliasCache.size >= 80) aliasCache.delete(aliasCache.keys().next().value!);
+      aliasCache.set(malId, { aliases, until: Date.now() + 300000 });
+      return aliases;
+    })();
+    aliasPending.set(malId, work);
+    try { return await work; } finally { aliasPending.delete(malId); }
+  }
   async function request(path: string, referer = `${origin}/`, refresh = false) {
     const key = `${path}|${referer}`;
     const hit = cache.get(key);
@@ -80,13 +117,10 @@ export function createAnikotoRouter(fetcher: typeof fetch = fetch) {
   router.get('/resolve/:malId', async (req, res) => {
     if (!/^[1-9]\d{0,8}$/.test(req.params.malId)) { res.status(400).json({error:'Invalid anime ID.'}); return; }
     try {
-      const response = await fetcher(`https://api.tenrai.org/v1/anime/${req.params.malId}`, { signal: AbortSignal.timeout(8000), redirect:'manual' });
-      if (!response.ok) throw new Error('The catalog could not resolve this anime ID.');
-      const { data } = await response.json() as {data?: {title?:string;title_english?:string;title_japanese?:string}};
-      const aliases: string[] = [...new Set<string>([data?.title, data?.title_english, data?.title_japanese].filter((v): v is string => typeof v === 'string' && v.length > 0))];
+      const aliases = await titleAliases(req.params.malId, req.query.refresh === '1');
       const names = new Set(aliases.map(normalizeTitle));
       for (const title of aliases.slice(0, 3)) {
-        const matches = parseSearch(await request(`/filter?keyword=${encodeURIComponent(title)}`)).filter(m => names.has(normalizeTitle(m.title)) || (m.alternateTitle && names.has(normalizeTitle(m.alternateTitle))));
+        const matches = parseSearch(await request(`/filter?keyword=${encodeURIComponent(title)}`, `${origin}/`, req.query.refresh === '1')).filter(m => names.has(normalizeTitle(m.title)) || (m.alternateTitle && names.has(normalizeTitle(m.alternateTitle))));
         if (matches.length === 1) { res.json({item: matches[0], malId: Number(req.params.malId), matchedBy:'catalog-title-alias'}); return; }
         if (matches.length > 1) break;
       }

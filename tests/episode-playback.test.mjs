@@ -4,13 +4,13 @@ import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 const source = await readFile(new URL('../client/src/lib/episodePlayback.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { allowedAnikotoPlayer, resolveEpisodePlayback } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { playbackEpisodeList, allowedAnikotoPlayer, resolveEpisodePlayback } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 const request = { malId: '52991', anilistId: 154587, episode: '2' };
 const players = [{ language: 'Hindi', url: 'https://player.abyssplayer.com/episode-two' }];
 const match = { malId: 52991, item: { slug: 'frieren-c6fbj' } };
 const fallback = { language: 'sub', url: 'https://megaplay.buzz/stream/s-2/provider-episode/sub' };
 function fallbackResponse(url) {
-  if (url === '/api/anikoto/resolve/52991') return Response.json(match);
+  if (url === '/api/anikoto/resolve/52991' || url === '/api/anikoto/resolve/52991?refresh=1') return Response.json(match);
   assert.match(url, /^\/api\/anikoto\/frieren-c6fbj\/episodes\/2\/players(?:\?refresh=1)?$/);
   return Response.json(fallback);
 }
@@ -55,8 +55,19 @@ test('retry refreshes Anikoto player resolution and can recover to Abyss', async
   const calls = [];
   await resolveEpisodePlayback({ ...request, refresh: true }, new AbortController().signal, async url => { calls.push(url); return url.includes('/animelok/') ? Response.json({}, { status: 404 }) : fallbackResponse(url); });
   assert.ok(calls.includes('/api/anikoto/frieren-c6fbj/episodes/2/players?refresh=1'));
+  assert.ok(calls.includes('/api/anikoto/resolve/52991?refresh=1'));
   const recovered = await resolveEpisodePlayback({ ...request, refresh: true }, new AbortController().signal, async url => { assert.equal(url, '/api/animelok/154587/2?refresh=1'); return Response.json({ players }); });
   assert.equal(recovered.provider, 'abyss');
+});
+
+test('Anikoto sidebar excludes metadata-only episodes and never reuses another title list', () => {
+  const metadata = Array.from({ length: 7 }, (_, i) => ({ number: String(i + 1), title: `Episode ${i + 1}` }));
+  const actual = { animeId: '61469', items: [{ number: '1', title: 'Steel Ball Run' }] };
+  assert.deepEqual(playbackEpisodeList(metadata, actual, '61469', 'anikoto'), actual.items);
+  assert.equal(playbackEpisodeList(metadata, actual, '61469', 'abyss').length, 7);
+  assert.deepEqual(playbackEpisodeList([], actual, '61469', 'anikoto'), actual.items);
+  assert.deepEqual(playbackEpisodeList([], actual, 'other-title', 'anikoto'), []);
+  assert.equal(playbackEpisodeList(metadata, null, '61469', 'anikoto').length, 7);
 });
 test('cancelled navigation does not begin or mount an Anikoto fallback', async () => {
   const controller = new AbortController();

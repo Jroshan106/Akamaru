@@ -2,6 +2,12 @@ export type PlaybackEpisode = { number: string; title: string };
 export type PlaybackProvider = 'abyss' | 'anikoto';
 export type EpisodePlayback = { provider: PlaybackProvider; players: { language: string; url: string }[]; episodes?: PlaybackEpisode[]; languages?: ('sub' | 'dub')[]; audio?: 'sub' | 'dub'; fallbackFrom?: PlaybackProvider };
 
+/** A selected provider's actual listings take precedence over franchise metadata. */
+export function playbackEpisodeList(metadata: PlaybackEpisode[], available: { animeId: string; items: PlaybackEpisode[] } | null, animeId: string, provider?: PlaybackProvider): PlaybackEpisode[] {
+  const current = available?.animeId === animeId ? available.items : [];
+  return provider === 'anikoto' && current.length ? current : metadata.length ? metadata : current;
+}
+
 export function allowedAnikotoPlayer(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   try {
@@ -43,7 +49,7 @@ export async function resolveEpisodePlayback(
     return { provider: 'abyss', players };
   }
   async function anikoto(): Promise<EpisodePlayback> {
-    const match = await read(`/api/anikoto/resolve/${malId}`);
+    const match = await read(`/api/anikoto/resolve/${malId}${refresh ? '?refresh=1' : ''}`);
     const slug = match.item?.slug;
     if (match.malId !== Number(malId) || typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{0,180}$/.test(slug)) throw new Error('Anikoto could not verify the matching anime.');
     const query = new URLSearchParams();
